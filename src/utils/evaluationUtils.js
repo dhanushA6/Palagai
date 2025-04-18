@@ -182,10 +182,11 @@ export const calculateProportion = (templatePoints, studentPoints) => {
   
   // Compare ratios (closer to 1 is better)
   const ratioDifference = Math.abs(templateRatio - studentRatio);
-  
   // Convert to score (0-100)
-  return Math.max(0, 100 - (ratioDifference * 100));
+  const temp = Math.max(0, 100 - (ratioDifference * 100));
+  return temp > 0 ? temp : 0;
 };
+
 
 // Calculate start and end point accuracy
 export const calculateEndpointAccuracy = (templateLine, studentLine) => {

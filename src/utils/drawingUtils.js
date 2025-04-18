@@ -11,6 +11,8 @@ export const getInterpolatedPoint = (points, t) => {
     const x2 = points[segmentIndex * 2 + 2];
     const y2 = points[segmentIndex * 2 + 3];
   
+
+    
     return {
       x: x1 + (x2 - x1) * segmentProgress,
       y: y1 + (y2 - y1) * segmentProgress
