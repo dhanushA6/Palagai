@@ -355,7 +355,7 @@ const handleMouseDown = (e) => {
       <div className="score-overlay">
         <div className="score-overlay-content">
           <button className="close-button" onClick={closeScoreOverlay}>×</button>
-          <h2>Drawing Score</h2>
+          <h2>Tracing Score</h2>
           
           <div className="score-result">
             <div className="score-circle">
@@ -453,7 +453,7 @@ const handleMouseDown = (e) => {
       <h1>Palagai Tool</h1>
       
       <div className="navigation">
-        <button onClick={() => navigate("/")}>Back to Drawing</button>
+        <button onClick={() => navigate("/")}>Back to Tracing</button>
       </div>
       
       <div className="content">
