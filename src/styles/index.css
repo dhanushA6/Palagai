@@ -1,0 +1,414 @@
+/* Global Styles */
+:root {
+    --primary-color: #4f46e5;
+    --primary-hover: #4338ca;
+    --secondary-color: #6b7280;
+    --light-gray: #f3f4f6;
+    --mid-gray: #d1d5db;
+    --dark-gray: #4b5563;
+    --danger: #ef4444;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --text-color: #111827;
+    --border-radius: 8px;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --transition: all 0.2s ease-in-out;
+  }
+  
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
+    color: var(--text-color);
+    line-height: 1.5;
+    background-color: #f9fafb;
+  }
+  
+  button {
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: var(--border-radius);
+    border: none;
+    background-color: var(--primary-color);
+    color: white;
+    transition: var(--transition);
+  }
+  
+  button:hover:not(:disabled) {
+    background-color: var(--primary-hover);
+  }
+  
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  h1, h2, h3 {
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+  
+  h1 {
+    font-size: 1.875rem;
+    color: var(--primary-color);
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+  }
+  
+  h3 {
+    font-size: 1.25rem;
+  }
+  
+  /* App Container */
+  .app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  
+  /* Drawing App */
+  .drawing-app {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .tools {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .tool-group {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .tool-btn {
+    background-color: var(--light-gray);
+    color: var(--text-color);
+  }
+  
+  .tool-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+  }
+  
+  .stroke-width {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .stroke-width input {
+    width: 120px;
+  }
+  
+  .drawing-canvas {
+    width: 1000px; 
+    margin: 0px auto;
+    border: 1px solid var(--mid-gray);
+    border-radius: var(--border-radius);
+    background-color: white;
+    background-image: 
+      linear-gradient(var(--light-gray) 1px, transparent 1px),
+      linear-gradient(90deg, var(--light-gray) 1px, transparent 1px);
+    background-size: 20px 20px;
+    box-shadow: var(--shadow-md);
+    cursor: crosshair;
+  }
+  
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  
+  /* Shapes List */
+  .shapes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .navigation {
+    margin-bottom: 1rem;
+  }
+  
+  .content {
+    display: flex;
+    gap: 2rem;
+  }
+  
+  .shapes-panel {
+    width: 250px;
+    padding: 1.5rem;
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .shapes-menu {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  
+  .shapes-menu li {
+    padding: 0.75rem;
+    border-radius: var(--border-radius);
+    background-color: var(--light-gray);
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  
+  .shapes-menu li:hover {
+    background-color: var(--mid-gray);
+  }
+  
+  .shapes-menu li.selected {
+    background-color: var(--primary-color);
+    color: white;
+  }
+  
+  .practice-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .practice-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .button-group {
+    display: flex;
+    gap: 0.75rem;
+  }
+  
+  .guide-btn {
+    background-color: var(--primary-color);
+  }
+  
+  .reset-btn {
+    background-color: var(--secondary-color);
+  }
+  
+  .score-btn {
+    background-color: var(--success);
+  }
+  
+  .practice-canvas {
+    border: 1px solid var(--mid-gray);
+    border-radius: var(--border-radius);
+    background-color: rgb(0, 0, 0);
+    box-shadow: var(--shadow-md);
+    cursor: crosshair;
+  }
+  
+  .score-card {
+    margin-top: 1rem;
+    padding: 1.5rem;
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .score-details {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .score-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  
+  .score-item span:first-child {
+    width: 120px;
+    font-weight: 500;
+  }
+  
+  .progress-bar {
+    flex: 1;
+    height: 8px;
+    background-color: var(--light-gray);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  
+  .progress-fill {
+    height: 100%;
+    background-color: var(--primary-color);
+    border-radius: 4px;
+  }
+  
+  .score-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+
+    
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .content {
+      flex-direction: column;
+    }
+    
+    .shapes-panel {
+      width: 100%;
+    }
+    
+    .shapes-menu {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+  }
+
+  /* Add to your existing CSS file */
+
+/* Feedback Toggle Styles */
+.feedback-toggle {
+  margin: 10px 0;
+  display: flex;
+  align-items: center;
+}
+
+.feedback-toggle label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.feedback-toggle input[type="checkbox"] {
+  margin-right: 8px;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+/* Practice Canvas */
+.practice-canvas {
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  margin-bottom: 20px;
+}
+
+/* Celebration Animation */
+@keyframes celebrate {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Score Card Enhancements */
+.score-card {
+  background: linear-gradient(135deg, #333333, #444444);
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  color: white;
+}
+
+.score-card h3 {
+  font-size: 24px;
+  margin-top: 0;
+  margin-bottom: 15px;
+  text-align: center;
+  color: #69F0AE;
+}
+
+.score-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.score-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.score-item span {
+  font-weight: 500;
+  width: 120px;
+}
+
+.progress-bar {
+  flex-grow: 1;
+  height: 12px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 0 10px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #69F0AE, #00E676);
+  border-radius: 6px;
+  transition: width 0.8s ease-out;
+}
+
+.score-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.score-actions button {
+  background-color: #536DFE;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.score-actions button:hover {
+  background-color: #3D5AFE;
+}
