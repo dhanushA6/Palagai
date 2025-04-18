@@ -173,7 +173,7 @@ const ShapeDrawingApp = () => {
       </div>
       
       <Stage
-        width={990}
+        width={900}
         height={500}
         ref={stageRef}
         onMouseDown={handleMouseDown}
