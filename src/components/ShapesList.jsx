@@ -3,7 +3,10 @@ import { Stage, Layer, Line, Circle, Rect } from "react-konva";
 import { useNavigate } from "react-router-dom";
 import { useShapes } from "../contexts/ShapesContext";
 import { getInterpolatedPoint, pointToLineDistance } from "../utils/drawingUtils";
-import { calculateAccuracy, generateHeatmapData } from "../utils/evaluationUtils";
+import { calculateAccuracy, generateHeatmapData } from "../utils/evaluationUtils"; 
+import { saveShapes } from "../utils/database";
+import TamilAudioPlayer from "./TamilAudioPlayer";
+
 
 const ShapesList = () => {
   const { savedShapes, loading } = useShapes();
@@ -21,11 +24,142 @@ const ShapesList = () => {
   const [realtimeFeedback, setRealtimeFeedback] = useState(false); // Toggle for realtime feedback
   const [cursorMode, setCursorMode] = useState("default"); // Tracks the current cursor mode
   const [showScoreOverlay, setShowScoreOverlay] = useState(false);
-  // New state for line accuracy
   const [lineAccuracy, setLineAccuracy] = useState({});
+   
+  const [showDataConverter, setShowDataConverter] = useState(false);
+  // New state for canvas dimensions
+  const [canvasDimensions, setCanvasDimensions] = useState({ width: 1000, height: 500 });
+  // Scale factor for template points
+  const [scaleFactor, setScaleFactor] = useState(1);
+  // Original bounds of the template
+  const [templateBounds, setTemplateBounds] = useState({ minX: 0, minY: 0, maxX: 1000, maxY: 500 });
   
   const stageRef = useRef(null);
+  const containerRef = useRef(null);
   const navigate = useNavigate();
+  // Calculate template bounds when a shape is selected
+  useEffect(() => {
+    if (selectedShape && selectedShape.shapes && selectedShape.shapes.length > 0) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      
+      // Find the bounding box of the template points
+      selectedShape.shapes.forEach(shape => {
+        for (let i = 0; i < shape.points.length; i += 2) {
+          const x = shape.points[i];
+          const y = shape.points[i + 1];
+          
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        }
+      });
+      
+      // Add padding
+      const padding = 20;
+      setTemplateBounds({
+        minX: minX - padding,
+        minY: minY - padding,
+        maxX: maxX + padding,
+        maxY: maxY + padding
+      });
+    }
+  }, [selectedShape]);
+
+  // Function to calculate scale factor based on canvas size and template bounds
+  const calculateScaleFactor = (width, height) => {
+    if (!selectedShape) return 1;
+    
+    const bounds = templateBounds;
+    const templateWidth = bounds.maxX - bounds.minX;
+    const templateHeight = bounds.maxY - bounds.minY;
+    
+    // Calculate how much we need to scale to fit the template in the canvas
+    const widthScale = width / templateWidth;
+    const heightScale = height / templateHeight;
+    
+    // Use the smaller scale to ensure the entire template fits
+    return Math.min(widthScale, heightScale, 2); // Cap at 2x to prevent excessive scaling
+  };
+
+  // Scale template points to fit current canvas
+  const scalePoint = (point) => {
+    if (!selectedShape) return point;
+    
+    const bounds = templateBounds;
+    const centerX = (bounds.minX + bounds.maxX) / 2;
+    const centerY = (bounds.minY + bounds.maxY) / 2;
+    
+    // Center point relative to template center
+    const centeredX = point.x - centerX;
+    const centeredY = point.y - centerY;
+    
+    // Scale and translate to canvas center
+    const canvasCenterX = canvasDimensions.width / 2;
+    const canvasCenterY = canvasDimensions.height / 2;
+    
+    return {
+      x: canvasCenterX + centeredX * scaleFactor,
+      y: canvasCenterY + centeredY * scaleFactor
+    };
+  };
+
+  // Scale a single coordinate
+  const scaleCoordinate = (coord, isX) => {
+    if (!selectedShape) return coord;
+    
+    const bounds = templateBounds;
+    const center = isX 
+      ? (bounds.minX + bounds.maxX) / 2
+      : (bounds.minY + bounds.maxY) / 2;
+    const canvasCenter = isX
+      ? canvasDimensions.width / 2
+      : canvasDimensions.height / 2;
+    
+    // Center, scale, and translate to canvas center
+    return canvasCenter + (coord - center) * scaleFactor;
+  };
+
+  // Scale an array of points
+  const scalePoints = (points) => {
+    if (!points) return [];
+    
+    const scaledPoints = [];
+    for (let i = 0; i < points.length; i += 2) {
+      scaledPoints.push(scaleCoordinate(points[i], true));
+      scaledPoints.push(scaleCoordinate(points[i + 1], false));
+    }
+    return scaledPoints;
+  };
+
+  // Update canvas dimensions on window resize
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      if (containerRef.current) {
+        // Get the container width
+        const containerWidth = containerRef.current.offsetWidth;
+        
+        // Set canvas width to container width and keep aspect ratio for height
+        const newWidth = Math.min(containerWidth, 1200); // Cap at 1200px
+        const newHeight = newWidth * 0.5; // Maintain 2:1 aspect ratio
+        
+        setCanvasDimensions({ width: newWidth, height: newHeight });
+        
+        // Calculate new scale factor
+        if (selectedShape) {
+          const newScaleFactor = calculateScaleFactor(newWidth, newHeight);
+          setScaleFactor(newScaleFactor);
+        }
+      }
+    };
+
+    updateCanvasSize();
+    window.addEventListener('resize', updateCanvasSize);
+    
+    return () => {
+      window.removeEventListener('resize', updateCanvasSize);
+    };
+  }, [selectedShape, templateBounds]);
 
   // Reset states when selected shape changes
   useEffect(() => {
@@ -38,7 +172,16 @@ const ShapesList = () => {
       setShowHeatmap(false);
       setLineAccuracy({});
       setCursorMode("default");
-      setShowScoreOverlay(false); // Hide score overlay when shape changes
+      setShowScoreOverlay(false);
+      
+      // Update scale factor for the new shape
+      if (containerRef.current) {
+        const newScaleFactor = calculateScaleFactor(
+          canvasDimensions.width,
+          canvasDimensions.height
+        );
+        setScaleFactor(newScaleFactor);
+      }
     }
   }, [selectedShape]);
 
@@ -49,7 +192,7 @@ const ShapesList = () => {
     setIsAnimating(true);
     setCurrentPathIndex(0);
     setProgress(0);
-    setCursorMode("guiding"); // Set cursor to guiding mode
+    setCursorMode("guiding");
     animatePath(0);
   };
 
@@ -57,13 +200,13 @@ const ShapesList = () => {
   const animatePath = (pathIndex) => {
     if (!selectedShape || pathIndex >= selectedShape.shapes.length) {
       setIsAnimating(false);
-      setCursorMode("default"); // Reset cursor mode when done
+      setCursorMode("default");
       return;
     }
 
     setCurrentPathIndex(pathIndex);
     let startTime = performance.now();
-    let duration = 5000 / animationSpeed; // Base duration adjusted by speed
+    let duration = 5000 / animationSpeed;
 
     const animate = (time) => {
       if (!selectedShape) {
@@ -77,13 +220,12 @@ const ShapesList = () => {
       
       if (elapsed > 1) {
         setProgress(1);
-        // Delay before moving to next path, also affected by speed
         setTimeout(() => {
           if (pathIndex + 1 < selectedShape.shapes.length) {
             animatePath(pathIndex + 1);
           } else {
             setIsAnimating(false);
-            setCursorMode("default"); // Reset cursor mode when done
+            setCursorMode("default");
           }
         }, 500 / animationSpeed);
         return;
@@ -96,7 +238,7 @@ const ShapesList = () => {
     requestAnimationFrame(animate);
   };
 
-  // Modified checkDrawingAccuracy function to return accuracy level
+  // Modified check drawing accuracy to work with scaled points
   const checkDrawingAccuracy = (x, y) => {
     if (!selectedShape || !realtimeFeedback) return "neutral";
     
@@ -107,16 +249,19 @@ const ShapesList = () => {
     selectedShape.shapes.forEach((templateShape) => {
       if (!templateShape || !templateShape.points) return;
       
-      // Constants for accuracy thresholds
-      const THRESHOLD_EXCELLENT = 5;  // Distance in pixels for "excellent" accuracy
-      const THRESHOLD_GOOD = 15;      // Distance in pixels for "good" accuracy
+      // Scale the thresholds based on the scale factor
+      const THRESHOLD_EXCELLENT = 5 * scaleFactor;
+      const THRESHOLD_GOOD = 15 * scaleFactor;
+      
+      // Get scaled template points
+      const scaledPoints = scalePoints(templateShape.points);
       
       // Check distance to each segment of the template shape
-      for (let i = 0; i < templateShape.points.length - 2; i += 2) {
-        const x1 = templateShape.points[i];
-        const y1 = templateShape.points[i + 1];
-        const x2 = templateShape.points[i + 2];
-        const y2 = templateShape.points[i + 3];
+      for (let i = 0; i < scaledPoints.length - 2; i += 2) {
+        const x1 = scaledPoints[i];
+        const y1 = scaledPoints[i + 1];
+        const x2 = scaledPoints[i + 2];
+        const y2 = scaledPoints[i + 3];
 
         const distance = pointToLineDistance(x, y, x1, y1, x2, y2);
         
@@ -133,45 +278,43 @@ const ShapesList = () => {
     });
     
     return bestAccuracy;
-  }; 
+  };
 
   const getCurrentTemplateStrokeWidth = () => {
     if (!selectedShape || currentPathIndex >= selectedShape.shapes.length) {
-      return 4; // Default width if no shape is selected
+      return 4 * scaleFactor; // Scale the stroke width
     }
-    return selectedShape.shapes[currentPathIndex].strokeWidth || 4;
+    return (selectedShape.shapes[currentPathIndex].strokeWidth || 4) * scaleFactor;
   };
-  
 
-  // Updated handleMouseDown with line ID and accuracy tracking
-// Update handleMouseDown to include the correct stroke width
-const handleMouseDown = (e) => {
-  if (isAnimating) return;
-  setIsDrawing(true);
-  setCursorMode("drawing");
-  const pos = e.target.getStage().getPointerPosition();
-  
-  // Get the template's stroke width
-  const templateStrokeWidth = getCurrentTemplateStrokeWidth();
-  
-  // Create new line with unique ID and matching stroke width
-  const lineId = Date.now().toString();
-  setUserLines((prev) => [...prev, { 
-    id: lineId, 
-    points: [pos.x, pos.y],
-    strokeWidth: templateStrokeWidth // Match template's stroke width
-  }]);
-  
-  // Check accuracy on first point
-  const accuracy = checkDrawingAccuracy(pos.x, pos.y);
-  
-  // Set accuracy for this new line
-  setLineAccuracy(prev => ({
-    ...prev,
-    [lineId]: accuracy
-  }));
-};
-  // Updated handleMouseMove with accuracy tracking
+  // Updated handlers to work with scaled points
+  const handleMouseDown = (e) => {
+    if (isAnimating) return;
+    setIsDrawing(true);
+    setCursorMode("drawing");
+    const pos = e.target.getStage().getPointerPosition();
+    
+    // Get and scale the template's stroke width
+    const templateStrokeWidth = getCurrentTemplateStrokeWidth();
+    
+    // Create new line with unique ID and matching stroke width
+    const lineId = Date.now().toString();
+    setUserLines((prev) => [...prev, { 
+      id: lineId, 
+      points: [pos.x, pos.y],
+      strokeWidth: templateStrokeWidth
+    }]);
+    
+    // Check accuracy on first point
+    const accuracy = checkDrawingAccuracy(pos.x, pos.y);
+    
+    // Set accuracy for this new line
+    setLineAccuracy(prev => ({
+      ...prev,
+      [lineId]: accuracy
+    }));
+  };
+
   const handleMouseMove = (e) => {
     if (!isDrawing || isAnimating) return;
     const stage = e.target.getStage();
@@ -199,7 +342,7 @@ const handleMouseDown = (e) => {
         // Determine new accuracy (prioritize worse accuracy)
         let newAccuracy = prev[currentLineId] || "neutral";
         
-        // Only downgrade accuracy (never upgrade) - this makes the line show its worst accuracy
+        // Only downgrade accuracy (never upgrade)
         if (prev[currentLineId] === "excellent" && accuracy !== "excellent") {
           newAccuracy = accuracy;
         } else if (prev[currentLineId] === "good" && accuracy === "neutral") {
@@ -216,62 +359,67 @@ const handleMouseDown = (e) => {
     }
   };
 
-  // Handle mouse/touch up for drawing
   const handleMouseUp = () => {
     setIsDrawing(false);
-    setCursorMode(isAnimating ? "guiding" : "default"); // Reset cursor mode
+    setCursorMode(isAnimating ? "guiding" : "default");
   };
 
   // Function to get line color based on accuracy
   const getLineColorByAccuracy = (lineId) => {
-    if (!realtimeFeedback) return "rgba(217, 239, 48, 0.7)"; // Default color when feedback is off
+    if (!realtimeFeedback) return "rgba(217, 239, 48, 0.7)";
     
     const accuracy = lineAccuracy[lineId];
     
     switch (accuracy) {
       case "excellent":
-        return "rgba(46, 204, 113, 0.8)"; // Green for excellent
+        return "rgba(46, 204, 113, 0.8)";
       case "good":
-        return "rgba(46, 204, 113, 0.8)"; // Yellow for good
+        return "rgba(46, 204, 113, 0.8)";
       default:
-        return "rgba(231, 76, 60, 0.8)"; // Red for neutral/poor
+        return "rgba(231, 76, 60, 0.8)";
     }
   };
 
   // Function to get line width based on accuracy
   const getLineWidthByAccuracy = (lineId) => {
-    if (!realtimeFeedback) return 4; // Default width when feedback is off
+    if (!realtimeFeedback) return 4 * scaleFactor;
     
     const accuracy = lineAccuracy[lineId];
+    const baseWidth = 4 * scaleFactor;
     
     switch (accuracy) {
       case "excellent":
-        return 5; // Slightly thicker for excellent
+        return baseWidth * 1.25;
       case "good":
-        return 4; // Normal width for good
+        return baseWidth;
       default:
-        return 3; // Thinner for neutral/poor
+        return baseWidth * 0.75;
     }
   };
 
-  // Calculate score based on template and user lines
+  // Modified to work with scaled points
   const calculateScore = () => {
     if (!selectedShape || userLines.length === 0) {
       alert("Please draw your shape first!");
       return;
     }
 
-    const result = calculateAccuracy(selectedShape.shapes, userLines);
+    // Scale template points for scoring
+    const scaledTemplateShapes = selectedShape.shapes.map(shape => ({
+      ...shape,
+      points: scalePoints(shape.points)
+    }));
+
+    const result = calculateAccuracy(scaledTemplateShapes, userLines);
     setScoreData(result);
     setIsScored(true);
-    // Show the score overlay
     setShowScoreOverlay(true);
     
-    // Generate heatmap data
+    // Generate heatmap data with scaled points
     if (stageRef.current) {
       const { width, height } = stageRef.current.getSize();
       const heatmap = generateHeatmapData(
-        selectedShape.shapes, 
+        scaledTemplateShapes, 
         userLines, 
         width, 
         height
@@ -280,30 +428,25 @@ const handleMouseDown = (e) => {
     }
   };
 
-  // Reset the current drawing
   const resetDrawing = () => {
-    // Clear all drawings
     setUserLines([]);
     setIsScored(false);
     setScoreData(null);
     setShowHeatmap(false);
     setShowScoreOverlay(false);
-    setLineAccuracy({}); // Clear line accuracy data
-    setCursorMode("default"); // Reset cursor mode
+    setLineAccuracy({});
+    setCursorMode("default");
   };
 
-  // Close score overlay
   const closeScoreOverlay = () => {
     setShowScoreOverlay(false);
   };
 
-  // Handle animation speed change
   const handleSpeedChange = (e) => {
     const newSpeed = parseFloat(e.target.value);
     setAnimationSpeed(newSpeed);
   };
 
-  // Get speed label for display
   const getSpeedLabel = () => {
     if (animationSpeed === 0.5) return "Slow";
     if (animationSpeed === 1) return "Normal";
@@ -312,12 +455,11 @@ const handleMouseDown = (e) => {
     return `${animationSpeed}x`;
   };
 
-  // Toggle real-time feedback
   const toggleRealtimeFeedback = () => {
     setRealtimeFeedback(!realtimeFeedback);
   };
 
-  // Render pen cursor
+  // Render functions for UI elements
   const renderPenCursor = (type) => {
     const drawingPen = (
       <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -338,7 +480,6 @@ const handleMouseDown = (e) => {
     return type === "drawing" ? drawingPen : guidingPen;
   };
 
-  // Render score overlay
   const renderScoreOverlay = () => {
     if (!showScoreOverlay || !scoreData) return null;
     
@@ -478,7 +619,7 @@ const handleMouseDown = (e) => {
           )}
         </div>
         
-        <div className="practice-area">
+        <div className="practice-area" ref={containerRef}>
           <div className="practice-controls">
             {selectedShape && (
               <>
@@ -504,20 +645,8 @@ const handleMouseDown = (e) => {
                     disabled={userLines.length === 0 || isScored}
                   >
                     Calculate Score
-                  </button>
+                  </button>  
                 </div>
-                
-                {/* Real-time Feedback Toggle
-                <div className="feedback-toggle">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={realtimeFeedback}
-                      onChange={toggleRealtimeFeedback}
-                    />
-                    Real-time Drawing Feedback
-                  </label>
-                </div> */}
                 
                 {/* Animation Speed Control */}
                 <div className="speed-control">
@@ -537,17 +666,19 @@ const handleMouseDown = (e) => {
                     />
                     <span className="speed-label">Fast</span>
                   </div>
-                </div>
-                
-                {/* Feedback Color Legend */}
-                
+                </div> 
+                <TamilAudioPlayer selectedShapeId={selectedShape?.id} />
+              
               </>
-            )}
+            )}   
+
+      
+        
           </div>
-          
+   
           <Stage
-            width={1000}
-            height={500}
+            width={canvasDimensions.width}
+            height={canvasDimensions.height}
             ref={stageRef}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
@@ -565,17 +696,15 @@ const handleMouseDown = (e) => {
                 selectedShape.shapes.map((shape, i) => (
                   <Line
                     key={`template-${i}`}
-                    points={shape.points}
+                    points={scalePoints(shape.points)}
                     stroke="rgba(250, 250, 250, 0.5)"
-                    strokeWidth={shape.strokeWidth || 4}
-                    // lineCap="round"
+                    strokeWidth={(shape.strokeWidth || 4) * scaleFactor}
                     lineJoin="round"
-                    dash={[10, 10]}
+                    dash={[10 * scaleFactor, 10 * scaleFactor]}
                     tension={0.5}
                     bezier={true}
                   />
                 ))}
-         
               
               {/* User's Drawn Lines with Accuracy Colors */}
               {userLines.map((line, i) => (
@@ -583,7 +712,7 @@ const handleMouseDown = (e) => {
                   key={`user-${i}`}
                   points={line.points}
                   stroke={getLineColorByAccuracy(line.id)}
-                  strokeWidth={line.strokeWidth || 4}
+                  strokeWidth={line.strokeWidth || (4 * scaleFactor)}
                   lineCap="round"
                   lineJoin="round"
                   tension={0.5}
@@ -595,30 +724,32 @@ const handleMouseDown = (e) => {
               {selectedShape && isAnimating && selectedShape.shapes[currentPathIndex] && (
                 (() => {
                   const shape = selectedShape.shapes[currentPathIndex];
-                  const { x, y } = getInterpolatedPoint(shape.points, progress);
+                  const scaledPoints = scalePoints(shape.points);
+                  const { x, y } = getInterpolatedPoint(scaledPoints, progress);
                   return (
                     <>
                       <Circle 
                         x={x} 
                         y={y} 
-                        radius={10} 
+                        radius={10 * Math.sqrt(scaleFactor)} // Scale radius using square root for better proportions
                         fill="rgba(123, 241, 59, 0.69)" 
                       />
                       <Circle 
                         x={x} 
                         y={y} 
-                        radius={5} 
+                        radius={5 * Math.sqrt(scaleFactor)}
                         fill="rgba(123, 241, 59, 0.69)" 
                       />
                     </>
                   );
                 })()
-              )}
+              )} 
               
               {/* Heatmap overlay when enabled */}
-              {showHeatmap && renderHeatmap()}
+              {showHeatmap && renderHeatmap()} 
             </Layer>
-          </Stage>
+          </Stage> 
+         
         </div>
       </div>
       
@@ -627,8 +758,52 @@ const handleMouseDown = (e) => {
       
       {/* CSS for the component */}
       <style jsx>{`
+        .shapes-list {
+          width: 100%;
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 1rem;
+        }
+        
+        .content {
+          display: flex;
+          flex-direction: column;
+        }
+        
+        @media (min-width: 768px) {
+          .content {
+            flex-direction: row;
+          }
+        }
+        
+        .shapes-panel {
+          width: 100%;
+          max-width: 100%;
+          margin-bottom: 1rem;
+        }
+        
+        @media (min-width: 768px) {
+          .shapes-panel {
+            width: 250px;
+            min-width: 250px;
+            margin-right: 1rem;
+            margin-bottom: 0;
+          }
+        }
+        
+        .practice-area {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+        }
+        
         .practice-canvas {
           cursor: ${getCursorStyle()};
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          margin-top: 1rem;
+          width: 100%;
         }
         
         /* Score Overlay Styles */
@@ -775,7 +950,34 @@ const handleMouseDown = (e) => {
           height: 10px;
           border-radius: 3px;
           margin-right: 8px;
-        }
+        }  
+
+
+
+
+
+
+
+  .data-converter-container {
+  margin-top: 20px;
+  border-top: 1px solid #ddd;
+  padding-top: 20px;
+  }
+
+  .analyze-btn {
+  padding: 8px 16px;
+  background-color: #9C27B0;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 10px;
+  }
+
+  .analyze-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  }
       `}</style>
     </div>
   );

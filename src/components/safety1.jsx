@@ -1,799 +1,599 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Stage, Layer, Line, Circle, Rect } from "react-konva";
-import { useNavigate } from "react-router-dom";
-import { useShapes } from "../contexts/ShapesContext";
-import { getInterpolatedPoint, pointToLineDistance, generateParticles } from "../utils/drawingUtils";
-import { calculateAccuracy, generateHeatmapData } from "../utils/evaluationUtils";
-
-const ShapesList = () => {
-  const { savedShapes, loading } = useShapes();
-  const [selectedShape, setSelectedShape] = useState(null);
-  const [userLines, setUserLines] = useState([]);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [currentPathIndex, setCurrentPathIndex] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [isScored, setIsScored] = useState(false);
-  const [scoreData, setScoreData] = useState(null);
-  const [showHeatmap, setShowHeatmap] = useState(false);
-  const [heatmapData, setHeatmapData] = useState(null);
-  const [animationSpeed, setAnimationSpeed] = useState(1); // Default speed multiplier
-  const [particles, setParticles] = useState([]);
-  const [lastPoint, setLastPoint] = useState(null);
-  const [realtimeFeedback, setRealtimeFeedback] = useState(false); // Toggle for realtime feedback
-  const [cursorMode, setCursorMode] = useState("default"); // Tracks the current cursor mode
-  // Add new state for overlay
-  const [showScoreOverlay, setShowScoreOverlay] = useState(false);
-  
-  const stageRef = useRef(null);
-  const particleAnimationRef = useRef(null);
-  const particleTimeoutRef = useRef(null);
-  const navigate = useNavigate();
-
-  // Clear all particles with a dedicated function
-  const clearAllParticles = () => {
-    // Cancel any pending timeouts
-    if (particleTimeoutRef.current) {
-      clearTimeout(particleTimeoutRef.current);
-    }
-    // Clear all particles immediately
-    setParticles([]);
-  };
-
-  // Reset states when selected shape changes
-  useEffect(() => {
-    if (selectedShape) {
-      setProgress(0);
-      setCurrentPathIndex(0);
-      setUserLines([]);
-      setIsScored(false);
-      setScoreData(null);
-      setShowHeatmap(false);
-      clearAllParticles(); // Use the dedicated function
-      setCursorMode("default");
-      setShowScoreOverlay(false); // Hide score overlay when shape changes
-    }
-  }, [selectedShape]);
-
-  // Clear particles after delay - updated with shorter delay
-  const clearParticlesAfterDelay = (delay = 10) => { // Reduced to 1 second
-    // Clear any existing timeout to prevent multiple timeouts
-    if (particleTimeoutRef.current) {
-      clearTimeout(particleTimeoutRef.current);
-    }
-    
-    // Set new timeout to clear particles
-    particleTimeoutRef.current = setTimeout(() => {
-      setParticles([]); // Clear all particles
-    }, delay);
-  };
-
-  // Animate guide dot
-  const animateGuide = () => {
-    if (!selectedShape) return;
-    
-    setIsAnimating(true);
-    setCurrentPathIndex(0);
-    setProgress(0);
-    setCursorMode("guiding"); // Set cursor to guiding mode
-    animatePath(0);
-  };
-
-  // Animate a single path
-  const animatePath = (pathIndex) => {
-    if (!selectedShape || pathIndex >= selectedShape.shapes.length) {
-      setIsAnimating(false);
-      setCursorMode("default"); // Reset cursor mode when done
-      return;
-    }
-
-    setCurrentPathIndex(pathIndex);
-    let startTime = performance.now();
-    let duration = 5000 / animationSpeed; // Base duration adjusted by speed
-
-    const animate = (time) => {
-      if (!selectedShape) {
-        cancelAnimationFrame(animate);
-        setIsAnimating(false);
-        setCursorMode("default");
-        return;
+[
+  {
+    "id": "Z",
+    "shapes": [
+      {
+        "points": [
+          130.79998779296875,
+          172.79999542236328,
+          131.79998779296875,
+          172.79999542236328,
+          131.79998779296875,
+          172.79999542236328,
+          132.79998779296875,
+          172.79999542236328,
+          132.79998779296875,
+          172.79999542236328,
+          133.79998779296875,
+          172.79999542236328,
+          133.79998779296875,
+          172.79999542236328,
+          135.79998779296875,
+          173.79999542236328,
+          135.79998779296875,
+          173.79999542236328,
+          136.79998779296875,
+          174.79999542236328,
+          136.79998779296875,
+          174.79999542236328,
+          139.79998779296875,
+          175.79999542236328,
+          139.79998779296875,
+          175.79999542236328,
+          140.79998779296875,
+          177.79999542236328,
+          140.79998779296875,
+          177.79999542236328,
+          142.79998779296875,
+          178.79999542236328,
+          142.79998779296875,
+          178.79999542236328,
+          144.79998779296875,
+          180.79999542236328,
+          144.79998779296875,
+          180.79999542236328,
+          147.79998779296875,
+          182.79999542236328,
+          147.79998779296875,
+          182.79999542236328,
+          148.79998779296875,
+          185.79999542236328,
+          148.79998779296875,
+          185.79999542236328,
+          150.79998779296875,
+          187.79999542236328,
+          150.79998779296875,
+          187.79999542236328,
+          152.79998779296875,
+          189.79999542236328,
+          152.79998779296875,
+          189.79999542236328,
+          152.79998779296875,
+          190.79999542236328,
+          152.79998779296875,
+          190.79999542236328,
+          155.79998779296875,
+          193.79999542236328,
+          155.79998779296875,
+          193.79999542236328,
+          157.79998779296875,
+          195.79999542236328,
+          157.79998779296875,
+          195.79999542236328,
+          159.79998779296875,
+          198.79999542236328,
+          159.79998779296875,
+          198.79999542236328,
+          161.79998779296875,
+          201.79999542236328,
+          161.79998779296875,
+          201.79999542236328,
+          164.79998779296875,
+          203.79999542236328,
+          164.79998779296875,
+          203.79999542236328,
+          166.79998779296875,
+          206.79999542236328,
+          166.79998779296875,
+          206.79999542236328,
+          168.79998779296875,
+          208.79999542236328,
+          168.79998779296875,
+          208.79999542236328,
+          169.79998779296875,
+          210.79999542236328,
+          169.79998779296875,
+          210.79999542236328,
+          171.79998779296875,
+          212.79999542236328,
+          171.79998779296875,
+          212.79999542236328,
+          172.79998779296875,
+          214.79999542236328,
+          172.79998779296875,
+          214.79999542236328,
+          174.79998779296875,
+          217.79999542236328,
+          174.79998779296875,
+          217.79999542236328,
+          175.79998779296875,
+          219.79999542236328,
+          175.79998779296875,
+          219.79999542236328,
+          176.79998779296875,
+          222.79999542236328,
+          176.79998779296875,
+          222.79999542236328,
+          177.79998779296875,
+          225.79999542236328,
+          177.79998779296875,
+          225.79999542236328,
+          179.79998779296875,
+          228.79999542236328,
+          179.79998779296875,
+          228.79999542236328,
+          180.79998779296875,
+          231.79999542236328,
+          180.79998779296875,
+          231.79999542236328,
+          182.79998779296875,
+          235.79999542236328,
+          182.79998779296875,
+          235.79999542236328,
+          185.79998779296875,
+          240.79999542236328,
+          185.79998779296875,
+          240.79999542236328,
+          188.79998779296875,
+          245.79999542236328,
+          188.79998779296875,
+          245.79999542236328,
+          189.79998779296875,
+          250.79999542236328,
+          189.79998779296875,
+          250.79999542236328,
+          191.79998779296875,
+          253.79999542236328,
+          191.79998779296875,
+          253.79999542236328,
+          192.79998779296875,
+          256.7999954223633,
+          192.79998779296875,
+          256.7999954223633,
+          192.79998779296875,
+          259.7999954223633,
+          192.79998779296875,
+          259.7999954223633,
+          193.79998779296875,
+          261.7999954223633,
+          193.79998779296875,
+          261.7999954223633,
+          194.79998779296875,
+          264.7999954223633,
+          194.79998779296875,
+          264.7999954223633,
+          195.79998779296875,
+          269.7999954223633,
+          195.79998779296875,
+          269.7999954223633,
+          196.79998779296875,
+          271.7999954223633,
+          196.79998779296875,
+          271.7999954223633,
+          198.79998779296875,
+          276.7999954223633,
+          198.79998779296875,
+          276.7999954223633,
+          200.79998779296875,
+          282.7999954223633,
+          200.79998779296875,
+          282.7999954223633,
+          201.79998779296875,
+          288.7999954223633,
+          201.79998779296875,
+          288.7999954223633,
+          204.79998779296875,
+          292.7999954223633,
+          204.79998779296875,
+          292.7999954223633,
+          205.79998779296875,
+          297.7999954223633,
+          205.79998779296875,
+          297.7999954223633,
+          207.79998779296875,
+          302.7999954223633,
+          207.79998779296875,
+          302.7999954223633,
+          208.79998779296875,
+          305.7999954223633,
+          208.79998779296875,
+          305.7999954223633,
+          210.79998779296875,
+          309.7999954223633,
+          210.79998779296875,
+          309.7999954223633,
+          212.79998779296875,
+          314.7999954223633,
+          212.79998779296875,
+          314.7999954223633,
+          214.79998779296875,
+          317.7999954223633,
+          214.79998779296875,
+          317.7999954223633,
+          216.79998779296875,
+          322.7999954223633,
+          216.79998779296875,
+          322.7999954223633,
+          216.79998779296875,
+          326.7999954223633,
+          216.79998779296875,
+          326.7999954223633,
+          217.79998779296875,
+          329.7999954223633,
+          217.79998779296875,
+          329.7999954223633,
+          218.79998779296875,
+          331.7999954223633,
+          218.79998779296875,
+          331.7999954223633,
+          218.79998779296875,
+          332.7999954223633,
+          218.79998779296875,
+          332.7999954223633,
+          219.79998779296875,
+          334.7999954223633,
+          219.79998779296875,
+          334.7999954223633,
+          220.79998779296875,
+          334.7999954223633,
+          220.79998779296875,
+          334.7999954223633,
+          220.79998779296875,
+          335.7999954223633,
+          220.79998779296875,
+          335.7999954223633
+        ],
+        "tool": "pen",
+        "strokeWidth": 3
+      },
+      {
+        "points": [
+          220.79998779296875,
+          121.79999542236328,
+          220.79998779296875,
+          121.79999542236328,
+          220.79998779296875,
+          121.79999542236328,
+          223.79998779296875,
+          121.79999542236328,
+          223.79998779296875,
+          121.79999542236328,
+          228.79998779296875,
+          124.79999542236328,
+          228.79998779296875,
+          124.79999542236328,
+          233.79998779296875,
+          126.79999542236328,
+          233.79998779296875,
+          126.79999542236328,
+          237.79998779296875,
+          130.79999542236328,
+          237.79998779296875,
+          130.79999542236328,
+          242.79998779296875,
+          132.79999542236328,
+          242.79998779296875,
+          132.79999542236328,
+          247.79998779296875,
+          135.79999542236328,
+          247.79998779296875,
+          135.79999542236328,
+          252.79998779296875,
+          138.79999542236328,
+          252.79998779296875,
+          138.79999542236328,
+          256.79998779296875,
+          142.79999542236328,
+          256.79998779296875,
+          142.79999542236328,
+          260.79998779296875,
+          144.79999542236328,
+          260.79998779296875,
+          144.79999542236328,
+          264.79998779296875,
+          148.79999542236328,
+          264.79998779296875,
+          148.79999542236328,
+          267.79998779296875,
+          152.79999542236328,
+          267.79998779296875,
+          152.79999542236328,
+          270.79998779296875,
+          155.79999542236328,
+          270.79998779296875,
+          155.79999542236328,
+          272.79998779296875,
+          160.79999542236328,
+          272.79998779296875,
+          160.79999542236328,
+          274.79998779296875,
+          163.79999542236328,
+          274.79998779296875,
+          163.79999542236328,
+          276.79998779296875,
+          166.79999542236328,
+          276.79998779296875,
+          166.79999542236328,
+          276.79998779296875,
+          170.79999542236328,
+          276.79998779296875,
+          170.79999542236328,
+          279.79998779296875,
+          175.79999542236328,
+          279.79998779296875,
+          175.79999542236328,
+          280.79998779296875,
+          178.79999542236328,
+          280.79998779296875,
+          178.79999542236328,
+          282.79998779296875,
+          183.79999542236328,
+          282.79998779296875,
+          183.79999542236328,
+          284.79998779296875,
+          187.79999542236328,
+          284.79998779296875,
+          187.79999542236328,
+          287.79998779296875,
+          194.79999542236328,
+          287.79998779296875,
+          194.79999542236328,
+          290.79998779296875,
+          201.79999542236328,
+          290.79998779296875,
+          201.79999542236328,
+          292.79998779296875,
+          206.79999542236328,
+          292.79998779296875,
+          206.79999542236328,
+          294.79998779296875,
+          214.79999542236328,
+          294.79998779296875,
+          214.79999542236328,
+          296.79998779296875,
+          221.79999542236328,
+          296.79998779296875,
+          221.79999542236328,
+          300.79998779296875,
+          226.79999542236328,
+          300.79998779296875,
+          226.79999542236328,
+          302.79998779296875,
+          234.79999542236328,
+          302.79998779296875,
+          234.79999542236328,
+          304.79998779296875,
+          241.79999542236328,
+          304.79998779296875,
+          241.79999542236328,
+          307.79998779296875,
+          246.79999542236328,
+          307.79998779296875,
+          246.79999542236328,
+          309.79998779296875,
+          252.79999542236328,
+          309.79998779296875,
+          252.79999542236328,
+          312.79998779296875,
+          258.7999954223633,
+          312.79998779296875,
+          258.7999954223633,
+          313.79998779296875,
+          265.7999954223633,
+          313.79998779296875,
+          265.7999954223633,
+          316.79998779296875,
+          272.7999954223633,
+          316.79998779296875,
+          272.7999954223633,
+          317.79998779296875,
+          278.7999954223633,
+          317.79998779296875,
+          278.7999954223633,
+          320.79998779296875,
+          284.7999954223633,
+          320.79998779296875,
+          284.7999954223633,
+          320.79998779296875,
+          288.7999954223633,
+          320.79998779296875,
+          288.7999954223633,
+          320.79998779296875,
+          291.7999954223633,
+          320.79998779296875,
+          291.7999954223633,
+          320.79998779296875,
+          293.7999954223633,
+          320.79998779296875,
+          293.7999954223633,
+          320.79998779296875,
+          294.7999954223633,
+          320.79998779296875,
+          294.7999954223633,
+          320.79998779296875,
+          295.7999954223633,
+          320.79998779296875,
+          295.7999954223633,
+          320.79998779296875,
+          296.7999954223633,
+          320.79998779296875,
+          296.7999954223633,
+          320.79998779296875,
+          297.7999954223633,
+          320.79998779296875,
+          297.7999954223633,
+          320.79998779296875,
+          298.7999954223633,
+          320.79998779296875,
+          298.7999954223633,
+          321.79998779296875,
+          299.7999954223633,
+          321.79998779296875,
+          299.7999954223633,
+          321.79998779296875,
+          300.7999954223633,
+          321.79998779296875,
+          300.7999954223633
+        ],
+        "tool": "pen",
+        "strokeWidth": 3
+      },
+      {
+        "points": [
+          306.79998779296875,
+          80.79999542236328,
+          307.79998779296875,
+          80.79999542236328,
+          307.79998779296875,
+          80.79999542236328,
+          311.79998779296875,
+          80.79999542236328,
+          311.79998779296875,
+          80.79999542236328,
+          316.79998779296875,
+          82.79999542236328,
+          316.79998779296875,
+          82.79999542236328,
+          324.79998779296875,
+          85.79999542236328,
+          324.79998779296875,
+          85.79999542236328,
+          331.79998779296875,
+          89.79999542236328,
+          331.79998779296875,
+          89.79999542236328,
+          336.79998779296875,
+          93.79999542236328,
+          336.79998779296875,
+          93.79999542236328,
+          343.79998779296875,
+          97.79999542236328,
+          343.79998779296875,
+          97.79999542236328,
+          348.79998779296875,
+          101.79999542236328,
+          348.79998779296875,
+          101.79999542236328,
+          352.79998779296875,
+          105.79999542236328,
+          352.79998779296875,
+          105.79999542236328,
+          359.79998779296875,
+          109.79999542236328,
+          359.79998779296875,
+          109.79999542236328,
+          364.79998779296875,
+          114.79999542236328,
+          364.79998779296875,
+          114.79999542236328,
+          367.79998779296875,
+          118.79999542236328,
+          367.79998779296875,
+          118.79999542236328,
+          371.79998779296875,
+          123.79999542236328,
+          371.79998779296875,
+          123.79999542236328,
+          375.79998779296875,
+          130.79999542236328,
+          375.79998779296875,
+          130.79999542236328,
+          378.79998779296875,
+          138.79999542236328,
+          378.79998779296875,
+          138.79999542236328,
+          381.79998779296875,
+          146.79999542236328,
+          381.79998779296875,
+          146.79999542236328,
+          384.79998779296875,
+          156.79999542236328,
+          384.79998779296875,
+          156.79999542236328,
+          388.79998779296875,
+          166.79999542236328,
+          388.79998779296875,
+          166.79999542236328,
+          391.79998779296875,
+          177.79999542236328,
+          391.79998779296875,
+          177.79999542236328,
+          395.79998779296875,
+          189.79999542236328,
+          395.79998779296875,
+          189.79999542236328,
+          398.79998779296875,
+          200.79999542236328,
+          398.79998779296875,
+          200.79999542236328,
+          401.79998779296875,
+          210.79999542236328,
+          401.79998779296875,
+          210.79999542236328,
+          404.79998779296875,
+          222.79999542236328,
+          404.79998779296875,
+          222.79999542236328,
+          406.79998779296875,
+          230.79999542236328,
+          406.79998779296875,
+          230.79999542236328,
+          408.79998779296875,
+          237.79999542236328,
+          408.79998779296875,
+          237.79999542236328,
+          409.79998779296875,
+          244.79999542236328,
+          409.79998779296875,
+          244.79999542236328,
+          410.79998779296875,
+          250.79999542236328,
+          410.79998779296875,
+          250.79999542236328,
+          412.79998779296875,
+          256.7999954223633,
+          412.79998779296875,
+          256.7999954223633,
+          414.79998779296875,
+          262.7999954223633,
+          414.79998779296875,
+          262.7999954223633,
+          416.79998779296875,
+          266.7999954223633,
+          416.79998779296875,
+          266.7999954223633,
+          417.79998779296875,
+          271.7999954223633,
+          417.79998779296875,
+          271.7999954223633,
+          418.79998779296875,
+          275.7999954223633,
+          418.79998779296875,
+          275.7999954223633,
+          420.79998779296875,
+          278.7999954223633,
+          420.79998779296875,
+          278.7999954223633,
+          420.79998779296875,
+          281.7999954223633,
+          420.79998779296875,
+          281.7999954223633,
+          420.79998779296875,
+          282.7999954223633,
+          420.79998779296875,
+          282.7999954223633,
+          421.79998779296875,
+          283.7999954223633,
+          421.79998779296875,
+          283.7999954223633,
+          421.79998779296875,
+          284.7999954223633,
+          421.79998779296875,
+          284.7999954223633
+        ],
+        "tool": "pen",
+        "strokeWidth": 3
       }
-
-      let elapsed = (time - startTime) / duration;
-      
-      if (elapsed > 1) {
-        setProgress(1);
-        // Delay before moving to next path, also affected by speed
-        setTimeout(() => {
-          if (pathIndex + 1 < selectedShape.shapes.length) {
-            animatePath(pathIndex + 1);
-          } else {
-            setIsAnimating(false);
-            setCursorMode("default"); // Reset cursor mode when done
-          }
-        }, 500 / animationSpeed);
-        return;
-      }
-
-      setProgress(elapsed);
-      requestAnimationFrame(animate);
-    };
-
-    requestAnimationFrame(animate);
-  };
-
-  // Animate particles - Updated to make particles fade out more quickly
-  useEffect(() => {
-    // Update particles animation
-    const animateParticles = () => {
-      setParticles(prevParticles => {
-        const now = Date.now();
-        // Update positions and filter out expired particles
-        return prevParticles
-          .map(p => ({
-            ...p,
-            x: p.x + p.vx,
-            y: p.y + p.vy,
-            vy: p.vy + 0.05, // Add gravity
-            size: p.size * 0.92 // Shrink much more quickly (changed from 0.96)
-          }))
-          .filter(p => {
-            // Filter out particles that are too small or have exceeded their lifetime
-            return now - p.createdAt < p.lifetime;
-          });
-      });
-
-      particleAnimationRef.current = requestAnimationFrame(animateParticles);
-    };
-
-    // Start animation
-    particleAnimationRef.current = requestAnimationFrame(animateParticles);
-
-    // Cleanup
-    return () => {
-      if (particleAnimationRef.current) {
-        cancelAnimationFrame(particleAnimationRef.current);
-      }
-      if (particleTimeoutRef.current) {
-        clearTimeout(particleTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Modified checkDrawingAccuracy function
-  const checkDrawingAccuracy = (x, y) => {
-    if (!selectedShape || !realtimeFeedback) return false;
-    
-    // Find the current template shape that the user should be drawing
-    // We need to check against all strokes to properly handle multiple-stroke templates
-    let bestAccuracy = false;
-    let minDistance = Infinity;
-    
-    // Check distance to each stroke in the template
-    selectedShape.shapes.forEach((templateShape) => {
-      if (!templateShape || !templateShape.points) return;
-      
-      // Constants for accuracy thresholds
-      const THRESHOLD_EXCELLENT = 5;  // Distance in pixels for "excellent" accuracy
-      const THRESHOLD_GOOD = 15;      // Distance in pixels for "good" accuracy
-      
-      // Check distance to each segment of the template shape
-      for (let i = 0; i < templateShape.points.length - 2; i += 2) {
-        const x1 = templateShape.points[i];
-        const y1 = templateShape.points[i + 1];
-        const x2 = templateShape.points[i + 2];
-        const y2 = templateShape.points[i + 3];
-
-        const distance = pointToLineDistance(x, y, x1, y1, x2, y2);
-        
-        if (distance < minDistance) {
-          minDistance = distance;
-          
-          if (distance <= THRESHOLD_EXCELLENT) {
-            bestAccuracy = 'excellent';
-          } else if (distance <= THRESHOLD_GOOD) {
-            bestAccuracy = 'good';
-          }
-        }
-      }
-    });
-    
-    return bestAccuracy;
-  };
-
-  // Create particles at point if drawing accurately - Modified with shorter lifetimes
-  const createFeedbackParticles = (x, y, accuracy) => {
-    // Don't create particles too frequently - increased minimum distance to reduce particles
-    if (lastPoint && 
-        Math.sqrt((x - lastPoint.x) ** 2 + (y - lastPoint.y) ** 2) < 15) {
-      return;
-    }
-    
-    setLastPoint({ x, y });
-    
-    if (accuracy === 'excellent') {
-      // Create particles for excellent accuracy with much shorter lifetime
-      const newParticles = generateParticles(x, y, 8).map(p => ({
-        ...p,
-        lifetime: 200 // Even shorter lifetime in milliseconds
-      }));
-      setParticles(prev => [...prev, ...newParticles]);
-    } else if (accuracy === 'good') {
-      // Fewer particles for good accuracy with shorter lifetime
-      const newParticles = generateParticles(x, y, 4).map(p => ({
-        ...p,
-        lifetime: 150 // Even shorter lifetime for "good" accuracy
-      }));
-      setParticles(prev => [...prev, ...newParticles]);
-    }
-
-    // Force clear particles after a short delay
-    clearParticlesAfterDelay(800); // Force clear after 800ms
-  };
-
-  // Handle mouse/touch down for drawing
-  const handleMouseDown = (e) => {
-    if (isAnimating) return;
-    setIsDrawing(true);
-    setCursorMode("drawing"); // Set cursor to drawing mode
-    const pos = e.target.getStage().getPointerPosition();
-    setUserLines((prev) => [...prev, { points: [pos.x, pos.y] }]);
-    
-    // Check accuracy on first point
-    const accuracy = checkDrawingAccuracy(pos.x, pos.y);
-    if (accuracy) {
-      createFeedbackParticles(pos.x, pos.y, accuracy);
-    }
-  };
-
-  // Handle mouse/touch move for drawing
-  const handleMouseMove = (e) => {
-    if (!isDrawing || isAnimating) return;
-    const stage = e.target.getStage();
-    const point = stage.getPointerPosition();
-    
-    // Update the current line
-    setUserLines((prev) => {
-      const lastLine = prev[prev.length - 1];
-      if (!lastLine) return prev;
-      
-      const newLastLine = {
-        ...lastLine,
-        points: [...lastLine.points, point.x, point.y]
-      };
-      
-      return [...prev.slice(0, -1), newLastLine];
-    });
-    
-    // Check accuracy and create particles if drawing is accurate
-    const accuracy = checkDrawingAccuracy(point.x, point.y);
-    if (accuracy) {
-      createFeedbackParticles(point.x, point.y, accuracy);
-    }
-  };
-
-  // Handle mouse/touch up for drawing - Updated to clear particles quickly
-  const handleMouseUp = () => {
-    setIsDrawing(false);
-    setLastPoint(null);
-    setCursorMode(isAnimating ? "guiding" : "default"); // Reset to guiding if that's active, otherwise default
-    
-    // Clear particles after a short delay
-    setTimeout(() => {
-      setParticles([]);
-    }, 300); // Short delay (300ms) to clear particles after lifting the pen
-  };
-
-  // Calculate score based on template and user lines
-  const calculateScore = () => {
-    if (!selectedShape || userLines.length === 0) {
-      alert("Please draw your shape first!");
-      return;
-    }
-
-    const result = calculateAccuracy(selectedShape.shapes, userLines);
-    setScoreData(result);
-    setIsScored(true);
-    // Show the score overlay
-    setShowScoreOverlay(true);
-    
-    // Generate heatmap data
-    if (stageRef.current) {
-      const { width, height } = stageRef.current.getSize();
-      const heatmap = generateHeatmapData(
-        selectedShape.shapes, 
-        userLines, 
-        width, 
-        height
-      );
-      setHeatmapData(heatmap);
-    }
-    
-    // Clear any particles that might be left
-    clearAllParticles();
-  };
-
-  // Reset the current drawing
-  const resetDrawing = () => {
-    // Clear all drawings and particles
-    setUserLines([]);
-    setIsScored(false);
-    setScoreData(null);
-    setShowHeatmap(false);
-    setShowScoreOverlay(false); // Hide score overlay when resetting
-    clearAllParticles(); // Use the dedicated function to ensure all particles are gone 
-    setCursorMode("default"); // Reset cursor mode
-  };
-
-  // Close score overlay
-  const closeScoreOverlay = () => {
-    setShowScoreOverlay(false);
-  };
-
-  // Handle animation speed change
-  const handleSpeedChange = (e) => {
-    const newSpeed = parseFloat(e.target.value);
-    setAnimationSpeed(newSpeed);
-  };
-
-  // Get speed label for display
-  const getSpeedLabel = () => {
-    if (animationSpeed === 0.5) return "Slow";
-    if (animationSpeed === 1) return "Normal";
-    if (animationSpeed === 2) return "Fast";
-    if (animationSpeed === 3) return "Very Fast";
-    return `${animationSpeed}x`;
-  };
-
-  // Toggle real-time feedback
-  const toggleRealtimeFeedback = () => {
-    setRealtimeFeedback(!realtimeFeedback);
-  };
-
-  // Render pen cursor
-  const renderPenCursor = (type) => {
-    const drawingPen = (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 28L4 24L18 10L22 14L8 28Z" fill="#4CAF50" stroke="#2E7D32" strokeWidth="2"/>
-        <path d="M22 14L26 10C27.1046 8.89543 27.1046 7.10457 26 6L24 4C22.8954 2.89543 21.1046 2.89543 20 4L18 6L22 10L22 14Z" fill="#81C784" stroke="#2E7D32" strokeWidth="2"/>
-        <circle cx="7" cy="25" r="2" fill="#E0E0E0"/>
-      </svg>
-    );
-    
-    const guidingPen = (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 28L4 24L18 10L22 14L8 28Z" fill="#FF5252" stroke="#D32F2F" strokeWidth="2"/>
-        <path d="M22 14L26 10C27.1046 8.89543 27.1046 7.10457 26 6L24 4C22.8954 2.89543 21.1046 2.89543 20 4L18 6L22 10L22 14Z" fill="#FF8A80" stroke="#D32F2F" strokeWidth="2"/>
-        <circle cx="7" cy="25" r="2" fill="#E0E0E0"/>
-      </svg>
-    );
-    
-    return type === "drawing" ? drawingPen : guidingPen;
-  };
-
-  // Render score overlay
-  const renderScoreOverlay = () => {
-    if (!showScoreOverlay || !scoreData) return null;
-    
-    // Get feedback message based on score
-    const getFeedbackMessage = (score) => {
-      if (score >= 90) return "Excellent! Your drawing is nearly perfect!";
-      if (score >= 75) return "Great job! Your drawing is very good.";
-      if (score >= 60) return "Good work! Keep practicing to improve.";
-      if (score >= 40) return "Nice try! Practice will make it better.";
-      return "Keep practicing! You'll get better with time.";
-    };
-    
-    return (
-      <div className="score-overlay">
-        <div className="score-overlay-content">
-          <button className="close-button" onClick={closeScoreOverlay}>×</button>
-          <h2>Drawing Score</h2>
-          
-          <div className="score-result">
-            <div className="score-circle">
-              <span className="score-number">{scoreData.score}%</span>
-            </div>
-            <p className="score-feedback">{getFeedbackMessage(scoreData.score)}</p>
-          </div>
-          
-          <h3>Score Details</h3>
-          <div className="score-details">
-            <div className="score-item">
-              <span>Path Overlap:</span>
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill" 
-                  style={{ width: `${scoreData.overlap}%` }}
-                />
-              </div>
-              <span>{scoreData.overlap}%</span>
-            </div>
-            <div className="score-item">
-              <span>Stroke Order:</span>
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill" 
-                  style={{ width: `${scoreData.strokeOrder}%` }}
-                />
-              </div>
-              <span>{scoreData.strokeOrder}%</span>
-            </div>
-            <div className="score-item">
-              <span>Proportion:</span>
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill" 
-                  style={{ width: `${scoreData.proportion}%` }}
-                />
-              </div>
-              <span>{scoreData.proportion}%</span>
-            </div>
-          </div>
-          
-          <div className="score-actions">
-            <button onClick={() => setShowHeatmap(!showHeatmap)}>
-              {showHeatmap ? "Hide Heatmap" : "Show Heatmap"}
-            </button>
-            <button onClick={resetDrawing}>Try Again</button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Create a heatmap canvas image
-  const createHeatmapImage = (data, width, height) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    
-    ctx.fillStyle = 'rgba(0,0,0,0.1)';
-    ctx.fillRect(0, 0, width, height);
-    
-    return canvas;
-  };
-
-  // Render heatmap overlay
-  const renderHeatmap = () => {
-    if (!showHeatmap || !heatmapData || !stageRef.current) return null;
-    
-    const { width, height } = stageRef.current.getSize();
-    
-    return (
-      <Rect
-        width={width}
-        height={height}
-        fillPatternImage={createHeatmapImage(heatmapData, width, height)}
-        opacity={0.5}
-      />
-    );
-  };
-
-  // Get CSS cursor style based on mode
-  const getCursorStyle = () => {
-    if (cursorMode === "drawing") {
-      return "url('data:image/svg+xml;utf8," + encodeURIComponent(renderPenCursor("drawing").outerHTML) + "') 2 30, auto";
-    } else if (cursorMode === "guiding") {
-      return "url('data:image/svg+xml;utf8," + encodeURIComponent(renderPenCursor("guiding").outerHTML) + "') 2 30, auto";
-    }
-    return "default";
-  };
-
-  return (
-    <div className="shapes-list">
-      <h1>Saved Shapes</h1>
-      
-      <div className="navigation">
-        <button onClick={() => navigate("/")}>Back to Drawing</button>
-      </div>
-      
-      <div className="content">
-        <div className="shapes-panel">
-          <h2>Your Shapes</h2>
-          {loading ? (
-            <p>Loading shapes...</p>
-          ) : savedShapes.length === 0 ? (
-            <p>No saved shapes found. Create some drawings first!</p>
-          ) : (
-            <ul className="shapes-menu">
-              {savedShapes.map((shape, index) => (
-                <li
-                  key={index}
-                  className={selectedShape?.id === shape.id ? "selected" : ""}
-                  onClick={() => setSelectedShape(shape)}
-                >
-                  {shape.id}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        
-        <div className="practice-area">
-          <div className="practice-controls">
-            {selectedShape && (
-              <>
-                <h3>Practice: {selectedShape.id}</h3>
-                <div className="button-group">
-                  <button
-                    className="guide-btn"
-                    onClick={animateGuide}
-                    disabled={isAnimating}
-                  >
-                    {isAnimating ? "Guiding..." : "Guide Me"}
-                  </button>
-                  <button 
-                    className="reset-btn"
-                    onClick={resetDrawing}
-                    disabled={userLines.length === 0}
-                  >
-                    Reset
-                  </button>
-                  <button
-                    className="score-btn"
-                    onClick={calculateScore}
-                    disabled={userLines.length === 0 || isScored}
-                  >
-                    Calculate Score
-                  </button>
-                </div>
-                
-                {/* Real-time Feedback Toggle */}
-                <div className="feedback-toggle">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={realtimeFeedback}
-                      onChange={toggleRealtimeFeedback}
-                    />
-                    Real-time Drawing Feedback
-                  </label>
-                </div>
-                
-                {/* Animation Speed Control */}
-                <div className="speed-control">
-                  <label htmlFor="speed-slider">Animation Speed: {getSpeedLabel()}</label>
-                  <div className="speed-slider-container">
-                    <span className="speed-label">Slow</span>
-                    <input
-                      id="speed-slider"
-                      type="range"
-                      min="0.5"
-                      max="3"
-                      step="0.5"
-                      value={animationSpeed}
-                      onChange={handleSpeedChange}
-                      className="speed-slider"
-                      disabled={isAnimating}
-                    />
-                    <span className="speed-label">Fast</span>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-          
-          <Stage
-            width={1000}
-            height={500}
-            ref={stageRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onTouchStart={handleMouseDown}
-            onTouchMove={handleMouseMove}
-            onTouchEnd={handleMouseUp}
-            className="practice-canvas"
-            style={{ cursor: getCursorStyle() }}
-          >
-            <Layer>
-              {/* Template Shape (Gray) */}
-              {selectedShape &&
-                selectedShape.shapes.map((shape, i) => (
-                  <Line
-                    key={`template-${i}`}
-                    points={shape.points}
-                    stroke="rgba(250, 250, 250, 0.5)"
-                    strokeWidth={shape.strokeWidth || 4}
-                    lineCap="round"
-                    lineJoin="round"
-                    dash={[10, 5]}
-                    tension={0.5}
-                    bezier={true}
-                  />
-                ))}
-              
-              {/* User's Drawn Lines (Green) */}
-              {userLines.map((line, i) => (
-                <Line
-                  key={`user-${i}`}
-                  points={line.points}
-                  stroke="rgba(72, 230, 15, 0.5)"
-                  strokeWidth={4}
-                  lineCap="round"
-                  lineJoin="round"
-                  tension={0.5}
-                  bezier={true}
-                />
-              ))}
-              
-              {/* Moving Dot (Progress Indicator) */}
-              {selectedShape && isAnimating && selectedShape.shapes[currentPathIndex] && (
-                (() => {
-                  const shape = selectedShape.shapes[currentPathIndex];
-                  const { x, y } = getInterpolatedPoint(shape.points, progress);
-                  return (
-                    <>
-                      <Circle 
-                        x={x} 
-                        y={y} 
-                        radius={10} 
-                        fill="rgba(123, 241, 59, 0.69) " 
-                      />
-                      <Circle 
-                        x={x} 
-                        y={y} 
-                        radius={5} 
-                        fill="rgba(123, 241, 59, 0.69) " 
-                      />
-                    </>
-                  );
-                })()
-              )}
-              
-              {/* Feedback Particles */}
-              {particles.map(particle => (
-                <Circle
-                  key={`particle-${particle.id}`}
-                  x={particle.x}
-                  y={particle.y}
-                  radius={particle.size}
-                  fill={particle.color}
-                  opacity={(particle.lifetime - (Date.now() - particle.createdAt)) / particle.lifetime}
-                />
-              ))}
-              
-              {/* Heatmap overlay when enabled */}
-              {showHeatmap && renderHeatmap()}
-            </Layer>
-          </Stage>
-        </div>
-      </div>
-      
-      {/* Score Overlay */}
-      {renderScoreOverlay()}
-      
-      {/* CSS for the component */}
-      <style jsx>{`
-        .practice-canvas {
-          cursor: ${getCursorStyle()};
-        }
-        
-        /* Score Overlay Styles */
-        .score-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: rgba(0, 0, 0, 0.7);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-        }
-        
-        .score-overlay-content {
-          background-color: #ffffff;
-          border-radius: 8px;
-          padding: 25px;
-          width: 90%;
-          max-width: 500px;
-          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-          position: relative;
-        }
-        
-        .close-button {
-          position: absolute;
-          top: 10px;
-          right: 10px;
-          background: none;
-          border: none;
-          font-size: 24px;
-          cursor: pointer;
-          color: #666;
-        }
-        
-        .score-result {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          margin: 20px 0;
-        }
-        
-        .score-circle {
-          width: 120px;
-          height: 120px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #4CAF50, #8BC34A);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          margin-bottom: 15px;
-        }
-        
-        .score-number {
-          font-size: 36px;
-          font-weight: bold;
-          color: white;
-        }
-        
-        .score-feedback {
-          font-size: 18px;
-          text-align: center;
-          color: #333;
-          margin: 0;
-        }
-        
-        .score-details {
-          background-color: #f5f5f5;
-          border-radius: 6px;
-          padding: 15px;
-          margin-top: 15px;
-        }
-        
-        .score-item {
-          display: flex;
-          align-items: center;
-          margin: 10px 0;
-        }
-        
-        .score-item span {
-          flex: 1;
-          font-size: 14px;
-        }
-        
-        .progress-bar {
-          flex: 2;
-          height: 12px;
-          background-color: #e0e0e0;
-          border-radius: 6px;
-          margin: 0 10px;
-          overflow: hidden;
-        }
-        
-        .progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #4CAF50, #8BC34A);
-          border-radius: 6px;
-        }
-        
-        .score-actions {
-          display: flex;
-          justify-content: space-around;
-          margin-top: 20px;
-        }
-        
-        .score-actions button {
-          padding: 10px 20px;
-          border: none;
-          border-radius: 4px;
-          background-color: #4CAF50;
-          color: white;
-          font-weight: bold;
-          cursor: pointer;
-          transition: background-color 0.3s;
-        }
-        
-        .score-actions button:hover {
-          background-color: #3e8e41;
-        }
-      `}</style>
-    </div>
-  );
-};
-
-export default ShapesList;
+    ]
+  }
+]

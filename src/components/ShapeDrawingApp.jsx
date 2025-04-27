@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from "react";
 import { Stage, Layer, Line } from "react-konva";
 import { useNavigate } from "react-router-dom";
-import { saveShapes } from "../utils/database";
+import { saveShapes, downloadShapesAsJSON  } from "../utils/database";
 
 import { ShapesProvider, useShapes } from '../contexts/ShapesContext';
 
@@ -15,7 +15,11 @@ const ShapeDrawingApp = () => {
   const [strokeWidth, setStrokeWidth] = useState(3);
   const stageRef = useRef(null);
   const navigate = useNavigate();
-  const { refreshShapes } = useShapes();
+  const { refreshShapes } = useShapes(); 
+
+  const handleDownload = () => {
+    downloadShapesAsJSON();
+  }; 
 
   // Start drawing a new line
   const startDrawing = useCallback((pos) => {
@@ -129,10 +133,11 @@ const ShapeDrawingApp = () => {
     const name = prompt("Enter a name for your drawing:");
     if (name) {
       try {
-        await saveShapes(name, lines);
+        await saveShapes(name, lines); 
+      
         alert(`Drawing "${name}" saved successfully!`);
         refreshShapes(); // Update the shapes list
-        navigate("/shapes");
+        // navigate("/shapes");
       } catch (error) {
         console.error("Error saving drawing:", error);
         alert("Failed to save drawing. Please try again.");
@@ -219,7 +224,8 @@ const ShapeDrawingApp = () => {
         </button>
         <button onClick={() => navigate("/shapes")}>
           go to Practice 
-        </button>
+        </button> 
+        <button onClick={handleDownload} disabled={lines.length === 0} >Download Shapes JSON</button>
       </div>
     </div>
   );
