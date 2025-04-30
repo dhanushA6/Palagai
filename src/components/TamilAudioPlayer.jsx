@@ -47,9 +47,9 @@ const TamilAudioPlayer = ({ selectedShapeId }) => {
     if (audioRef.current && selectedShapeId) {
       // Use slower playback rate (0.08) for single characters, faster (0.15) for others
       if (selectedShapeId.length === 1) {
-        audioRef.current.playbackRate = 0.1;
+        audioRef.current.playbackRate = 0.5;
       } else {
-        audioRef.current.playbackRate = 0.15;
+        audioRef.current.playbackRate = 0.4;
       }
       
       // Increase the volume (0 = silent, 1 = normal, 2 = double volume)

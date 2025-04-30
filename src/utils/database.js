@@ -14,8 +14,10 @@ export const initDB = async () => {
 };
 
 export const saveShapes = async (id, shapes) => {
-  const db = await initDB(); 
-  await db.put(STORE_NAME, { id, shapes });
+  const db = await initDB();
+  await db.clear(STORE_NAME); 
+  await db.put(STORE_NAME, { id, shapes }); 
+
 };
 
 export const loadShapes = async () => {

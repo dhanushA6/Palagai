@@ -274,8 +274,6 @@
     margin-top: 1.5rem;
     display: flex;
     justify-content: flex-end;
-
-    
   }
   
   /* Responsive Design */
@@ -413,4 +411,322 @@
 
 .score-actions button:hover {
   background-color: #3D5AFE;
+}
+
+/* Level Manager Styles */
+.level-manager {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.level-selection {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+.level-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.level-card {
+  background-color: white;
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+  transition: transform 0.3s ease;
+}
+
+.level-card:hover {
+  transform: translateY(-5px);
+}
+
+.level-card h3 {
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+}
+
+.level-card p {
+  color: var(--text-color);
+  margin-bottom: 1rem;
+}
+
+.level-card button {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.level-card button:hover {
+  background-color: var(--primary-dark);
+}
+
+.level-info {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.level-info h2 {
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+}
+
+.level-complete-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.level-complete-content {
+  background-color: white;
+  border-radius: var(--border-radius);
+  padding: 2rem;
+  text-align: center;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: var(--shadow-lg);
+}
+
+.level-complete-content h2 {
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
+.level-complete-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.level-complete-actions button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.level-complete-actions button:first-child {
+  background-color: var(--light-gray);
+  color: var(--text-color);
+}
+
+.level-complete-actions button:last-child {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.level-complete-actions button:hover {
+  opacity: 0.9;
+}
+
+/* Shape Actions */
+.shape-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.shape-actions button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.shape-actions button:first-child {
+  background-color: var(--light-gray);
+  color: var(--text-color);
+}
+
+.shape-actions button:last-child {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.shape-actions button:hover {
+  opacity: 0.9;
+}
+
+.canvas-container {
+  position: relative;
+  width: fit-content;
+  margin: 0 auto;
+}
+
+.score-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.score-overlay-content {
+  background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+  border-radius: 12px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 500px;
+  color: white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.score-result {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.score-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto 1rem;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.score-number {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: white;
+}
+
+.score-feedback {
+  font-size: 1.2rem;
+  color: #e0e0e0;
+  margin-top: 1rem;
+}
+
+.score-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.score-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.score-item span:first-child {
+  width: 120px;
+  font-weight: 500;
+  color: #e0e0e0;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50, #45a049);
+  border-radius: 4px;
+  transition: width 0.8s ease-out;
+}
+
+.score-item span:last-child {
+  width: 50px;
+  text-align: right;
+  color: #e0e0e0;
+}
+
+.score-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.score-actions button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.score-actions button:first-child {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.score-actions button:last-child {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+}
+
+.score-actions button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.score-actions button.next-shape-btn {
+  background: linear-gradient(135deg, #2196F3, #1976D2);
+  color: white;
+}
+
+.score-actions button.next-shape-btn:hover {
+  background: linear-gradient(135deg, #1976D2, #1565C0);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }

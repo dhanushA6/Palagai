@@ -1,16 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Stage, Layer, Line, Circle, Rect } from "react-konva";
 import { useNavigate } from "react-router-dom";
-import { useShapes } from "../contexts/ShapesContext";
 import { getInterpolatedPoint, pointToLineDistance } from "../utils/drawingUtils";
 import { calculateAccuracy, generateHeatmapData } from "../utils/evaluationUtils"; 
-import { saveShapes } from "../utils/database";
 import TamilAudioPlayer from "./TamilAudioPlayer";
-
+import LevelManager from "./LevelManager";
 
 const ShapesList = () => {
-  const { savedShapes, loading } = useShapes();
-  const [selectedShape, setSelectedShape] = useState(null);
+  const [savedShapes, setSavedShapes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [userLines, setUserLines] = useState([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -20,30 +18,106 @@ const ShapesList = () => {
   const [scoreData, setScoreData] = useState(null);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [heatmapData, setHeatmapData] = useState(null);
-  const [animationSpeed, setAnimationSpeed] = useState(1); // Default speed multiplier
-  const [realtimeFeedback, setRealtimeFeedback] = useState(false); // Toggle for realtime feedback
-  const [cursorMode, setCursorMode] = useState("default"); // Tracks the current cursor mode
+  const [animationSpeed, setAnimationSpeed] = useState(1);
+  const [realtimeFeedback, setRealtimeFeedback] = useState(false);
+  const [cursorMode, setCursorMode] = useState("default");
   const [showScoreOverlay, setShowScoreOverlay] = useState(false);
   const [lineAccuracy, setLineAccuracy] = useState({});
-   
-  const [showDataConverter, setShowDataConverter] = useState(false);
-  // New state for canvas dimensions
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 1000, height: 500 });
-  // Scale factor for template points
   const [scaleFactor, setScaleFactor] = useState(1);
-  // Original bounds of the template
   const [templateBounds, setTemplateBounds] = useState({ minX: 0, minY: 0, maxX: 1000, maxY: 500 });
+  const [currentShapeId, setCurrentShapeId] = useState(null);
+  const [currentShapeData, setCurrentShapeData] = useState(null);
   
   const stageRef = useRef(null);
   const containerRef = useRef(null);
-  const navigate = useNavigate();
-  // Calculate template bounds when a shape is selected
+  const navigate = useNavigate(); 
+
+  // Load all shapes on component mount
   useEffect(() => {
-    if (selectedShape && selectedShape.shapes && selectedShape.shapes.length > 0) {
+    const loadAllShapes = async () => {
+      setLoading(true);
+      try {
+        const loadedShapes = await Promise.all(
+          ['a', 'aa', 'e', 'ee', 'k', 'ka', 'ra', 'pa', 'ma'].map(async (shapeId) => {
+            const data = await loadShapeData(shapeId);
+            return data;
+          })
+        );
+        
+        const flattenedShapes = loadedShapes
+          .filter(shape => shape !== null)
+          .flatMap(shape => Array.isArray(shape) ? shape : [shape]);
+          
+        setSavedShapes(flattenedShapes);
+      } catch (error) {
+        console.error("Error loading shapes:", error);
+        setSavedShapes([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    loadAllShapes();
+  }, []);
+
+  // Update current shape data when shape ID changes
+  useEffect(() => {
+    if (currentShapeId) {
+      const shapeData = savedShapes.find(shape => shape.id === currentShapeId);
+      setCurrentShapeData(shapeData);
+      if (shapeData) {
+        updateTemplateBounds(shapeData);
+      }
+    } else {
+      setCurrentShapeData(null);
+    }
+  }, [currentShapeId, savedShapes]);
+
+  // Reset states when shape changes
+  useEffect(() => {
+    resetStates();
+  }, [currentShapeId]);
+
+  // Update canvas dimensions on window resize
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.offsetWidth;
+        const newWidth = Math.min(containerWidth, 1200);
+        const newHeight = newWidth * 0.5;
+        
+        setCanvasDimensions({ width: newWidth, height: newHeight });
+        
+        const newScaleFactor = calculateScaleFactor(newWidth, newHeight);
+        setScaleFactor(newScaleFactor);
+      }
+    };
+
+    updateCanvasSize();
+    window.addEventListener('resize', updateCanvasSize);
+    
+    return () => {
+      window.removeEventListener('resize', updateCanvasSize);
+    };
+  }, [templateBounds]);
+
+  const loadShapeData = async (shapeId) => {
+    try {
+      const shapeData = await import(`../assets/data/${shapeId}.json`);
+      return shapeData.default || shapeData;
+    } catch (error) {
+      console.error(`Error loading shape data for ${shapeId}:`, error);
+      return null;
+    }
+  };
+
+  // Calculate template bounds when a shape is selected
+  const updateTemplateBounds = (shape) => {
+    if (shape && shape.shapes && shape.shapes.length > 0) {
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       
-      // Find the bounding box of the template points
-      selectedShape.shapes.forEach(shape => {
+      shape.shapes.forEach(shape => {
         for (let i = 0; i < shape.points.length; i += 2) {
           const x = shape.points[i];
           const y = shape.points[i + 1];
@@ -55,7 +129,6 @@ const ShapesList = () => {
         }
       });
       
-      // Add padding
       const padding = 20;
       setTemplateBounds({
         minX: minX - padding,
@@ -64,37 +137,29 @@ const ShapesList = () => {
         maxY: maxY + padding
       });
     }
-  }, [selectedShape]);
+  };
 
   // Function to calculate scale factor based on canvas size and template bounds
   const calculateScaleFactor = (width, height) => {
-    if (!selectedShape) return 1;
-    
     const bounds = templateBounds;
     const templateWidth = bounds.maxX - bounds.minX;
     const templateHeight = bounds.maxY - bounds.minY;
     
-    // Calculate how much we need to scale to fit the template in the canvas
     const widthScale = width / templateWidth;
     const heightScale = height / templateHeight;
     
-    // Use the smaller scale to ensure the entire template fits
-    return Math.min(widthScale, heightScale, 2); // Cap at 2x to prevent excessive scaling
+    return Math.min(widthScale, heightScale, 2);
   };
 
   // Scale template points to fit current canvas
   const scalePoint = (point) => {
-    if (!selectedShape) return point;
-    
     const bounds = templateBounds;
     const centerX = (bounds.minX + bounds.maxX) / 2;
     const centerY = (bounds.minY + bounds.maxY) / 2;
     
-    // Center point relative to template center
     const centeredX = point.x - centerX;
     const centeredY = point.y - centerY;
     
-    // Scale and translate to canvas center
     const canvasCenterX = canvasDimensions.width / 2;
     const canvasCenterY = canvasDimensions.height / 2;
     
@@ -106,8 +171,6 @@ const ShapesList = () => {
 
   // Scale a single coordinate
   const scaleCoordinate = (coord, isX) => {
-    if (!selectedShape) return coord;
-    
     const bounds = templateBounds;
     const center = isX 
       ? (bounds.minX + bounds.maxX) / 2
@@ -116,7 +179,6 @@ const ShapesList = () => {
       ? canvasDimensions.width / 2
       : canvasDimensions.height / 2;
     
-    // Center, scale, and translate to canvas center
     return canvasCenter + (coord - center) * scaleFactor;
   };
 
@@ -132,38 +194,8 @@ const ShapesList = () => {
     return scaledPoints;
   };
 
-  // Update canvas dimensions on window resize
-  useEffect(() => {
-    const updateCanvasSize = () => {
-      if (containerRef.current) {
-        // Get the container width
-        const containerWidth = containerRef.current.offsetWidth;
-        
-        // Set canvas width to container width and keep aspect ratio for height
-        const newWidth = Math.min(containerWidth, 1200); // Cap at 1200px
-        const newHeight = newWidth * 0.5; // Maintain 2:1 aspect ratio
-        
-        setCanvasDimensions({ width: newWidth, height: newHeight });
-        
-        // Calculate new scale factor
-        if (selectedShape) {
-          const newScaleFactor = calculateScaleFactor(newWidth, newHeight);
-          setScaleFactor(newScaleFactor);
-        }
-      }
-    };
-
-    updateCanvasSize();
-    window.addEventListener('resize', updateCanvasSize);
-    
-    return () => {
-      window.removeEventListener('resize', updateCanvasSize);
-    };
-  }, [selectedShape, templateBounds]);
-
-  // Reset states when selected shape changes
-  useEffect(() => {
-    if (selectedShape) {
+  // Reset states when shape changes
+  const resetStates = () => {
       setProgress(0);
       setCurrentPathIndex(0);
       setUserLines([]);
@@ -173,32 +205,22 @@ const ShapesList = () => {
       setLineAccuracy({});
       setCursorMode("default");
       setShowScoreOverlay(false);
-      
-      // Update scale factor for the new shape
-      if (containerRef.current) {
-        const newScaleFactor = calculateScaleFactor(
-          canvasDimensions.width,
-          canvasDimensions.height
-        );
-        setScaleFactor(newScaleFactor);
-      }
-    }
-  }, [selectedShape]);
+  };
 
   // Animate guide dot
-  const animateGuide = () => {
-    if (!selectedShape) return;
+  const animateGuide = (currentShape) => {
+    if (!currentShape) return;
     
     setIsAnimating(true);
     setCurrentPathIndex(0);
     setProgress(0);
     setCursorMode("guiding");
-    animatePath(0);
+    animatePath(0, currentShape);
   };
 
   // Animate a single path
-  const animatePath = (pathIndex) => {
-    if (!selectedShape || pathIndex >= selectedShape.shapes.length) {
+  const animatePath = (pathIndex, currentShape) => {
+    if (!currentShape || pathIndex >= currentShape.shapes.length) {
       setIsAnimating(false);
       setCursorMode("default");
       return;
@@ -209,7 +231,7 @@ const ShapesList = () => {
     let duration = 5000 / animationSpeed;
 
     const animate = (time) => {
-      if (!selectedShape) {
+      if (!currentShape) {
         cancelAnimationFrame(animate);
         setIsAnimating(false);
         setCursorMode("default");
@@ -221,8 +243,8 @@ const ShapesList = () => {
       if (elapsed > 1) {
         setProgress(1);
         setTimeout(() => {
-          if (pathIndex + 1 < selectedShape.shapes.length) {
-            animatePath(pathIndex + 1);
+          if (pathIndex + 1 < currentShape.shapes.length) {
+            animatePath(pathIndex + 1, currentShape);
           } else {
             setIsAnimating(false);
             setCursorMode("default");
@@ -239,24 +261,20 @@ const ShapesList = () => {
   };
 
   // Modified check drawing accuracy to work with scaled points
-  const checkDrawingAccuracy = (x, y) => {
-    if (!selectedShape || !realtimeFeedback) return "neutral";
+  const checkDrawingAccuracy = (x, y, currentShape) => {
+    if (!currentShape || !realtimeFeedback) return "neutral";
     
     let minDistance = Infinity;
     let bestAccuracy = "neutral";
     
-    // Check distance to each stroke in the template
-    selectedShape.shapes.forEach((templateShape) => {
+    currentShape.shapes.forEach((templateShape) => {
       if (!templateShape || !templateShape.points) return;
       
-      // Scale the thresholds based on the scale factor
       const THRESHOLD_EXCELLENT = 5 * scaleFactor;
       const THRESHOLD_GOOD = 15 * scaleFactor;
       
-      // Get scaled template points
       const scaledPoints = scalePoints(templateShape.points);
       
-      // Check distance to each segment of the template shape
       for (let i = 0; i < scaledPoints.length - 2; i += 2) {
         const x1 = scaledPoints[i];
         const y1 = scaledPoints[i + 1];
@@ -280,24 +298,22 @@ const ShapesList = () => {
     return bestAccuracy;
   };
 
-  const getCurrentTemplateStrokeWidth = () => {
-    if (!selectedShape || currentPathIndex >= selectedShape.shapes.length) {
-      return 4 * scaleFactor; // Scale the stroke width
+  const getCurrentTemplateStrokeWidth = (currentShape) => {
+    if (!currentShape || currentPathIndex >= currentShape.shapes.length) {
+      return 4 * scaleFactor;
     }
-    return (selectedShape.shapes[currentPathIndex].strokeWidth || 4) * scaleFactor;
+    return (currentShape.shapes[currentPathIndex].strokeWidth || 4) * scaleFactor;
   };
 
   // Updated handlers to work with scaled points
-  const handleMouseDown = (e) => {
+  const handleMouseDown = (e, currentShape) => {
     if (isAnimating) return;
     setIsDrawing(true);
     setCursorMode("drawing");
     const pos = e.target.getStage().getPointerPosition();
     
-    // Get and scale the template's stroke width
-    const templateStrokeWidth = getCurrentTemplateStrokeWidth();
+    const templateStrokeWidth = getCurrentTemplateStrokeWidth(currentShape);
     
-    // Create new line with unique ID and matching stroke width
     const lineId = Date.now().toString();
     setUserLines((prev) => [...prev, { 
       id: lineId, 
@@ -305,22 +321,19 @@ const ShapesList = () => {
       strokeWidth: templateStrokeWidth
     }]);
     
-    // Check accuracy on first point
-    const accuracy = checkDrawingAccuracy(pos.x, pos.y);
+    const accuracy = checkDrawingAccuracy(pos.x, pos.y, currentShape);
     
-    // Set accuracy for this new line
     setLineAccuracy(prev => ({
       ...prev,
       [lineId]: accuracy
     }));
   };
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = (e, currentShape) => {
     if (!isDrawing || isAnimating) return;
     const stage = e.target.getStage();
     const point = stage.getPointerPosition();
     
-    // Update the current line
     setUserLines((prev) => {
       const lastLine = prev[prev.length - 1];
       if (!lastLine) return prev;
@@ -333,16 +346,13 @@ const ShapesList = () => {
       return [...prev.slice(0, -1), newLastLine];
     });
     
-    // Check accuracy and update the line's accuracy status
     if (realtimeFeedback && userLines.length > 0) {
-      const accuracy = checkDrawingAccuracy(point.x, point.y);
+      const accuracy = checkDrawingAccuracy(point.x, point.y, currentShape);
       const currentLineId = userLines[userLines.length - 1].id;
       
       setLineAccuracy(prev => {
-        // Determine new accuracy (prioritize worse accuracy)
         let newAccuracy = prev[currentLineId] || "neutral";
         
-        // Only downgrade accuracy (never upgrade)
         if (prev[currentLineId] === "excellent" && accuracy !== "excellent") {
           newAccuracy = accuracy;
         } else if (prev[currentLineId] === "good" && accuracy === "neutral") {
@@ -397,15 +407,13 @@ const ShapesList = () => {
     }
   };
 
-  // Modified to work with scaled points
-  const calculateScore = () => {
-    if (!selectedShape || userLines.length === 0) {
+  const calculateScore = (currentShape) => {
+    if (!currentShape || userLines.length === 0) {
       alert("Please draw your shape first!");
       return;
     }
 
-    // Scale template points for scoring
-    const scaledTemplateShapes = selectedShape.shapes.map(shape => ({
+    const scaledTemplateShapes = currentShape.shapes.map(shape => ({
       ...shape,
       points: scalePoints(shape.points)
     }));
@@ -415,7 +423,6 @@ const ShapesList = () => {
     setIsScored(true);
     setShowScoreOverlay(true);
     
-    // Generate heatmap data with scaled points
     if (stageRef.current) {
       const { width, height } = stageRef.current.getSize();
       const heatmap = generateHeatmapData(
@@ -436,10 +443,6 @@ const ShapesList = () => {
     setShowScoreOverlay(false);
     setLineAccuracy({});
     setCursorMode("default");
-  };
-
-  const closeScoreOverlay = () => {
-    setShowScoreOverlay(false);
   };
 
   const handleSpeedChange = (e) => {
@@ -480,32 +483,31 @@ const ShapesList = () => {
     return type === "drawing" ? drawingPen : guidingPen;
   };
 
-  const renderScoreOverlay = () => {
+  const handleMoveToNext = (moveToNextShape) => {
+    resetDrawing();
+    moveToNextShape();
+  };
+
+  const renderScoreOverlay = (moveToNextShape) => {
     if (!showScoreOverlay || !scoreData) return null;
-    
-    // Get feedback message based on score
-    const getFeedbackMessage = (score) => {
-      if (score >= 90) return "Excellent! Your drawing is nearly perfect!";
-      if (score >= 75) return "Great job! Your drawing is very good.";
-      if (score >= 60) return "Good work! Keep practicing to improve.";
-      if (score >= 40) return "Nice try! Practice will make it better.";
-      return "Keep practicing! You'll get better with time.";
-    };
     
     return (
       <div className="score-overlay">
         <div className="score-overlay-content">
-          <button className="close-button" onClick={closeScoreOverlay}>×</button>
           <h2>Tracing Score</h2>
-          
           <div className="score-result">
             <div className="score-circle">
               <span className="score-number">{scoreData.score}%</span>
             </div>
-            <p className="score-feedback">{getFeedbackMessage(scoreData.score)}</p>
+            <p className="score-feedback">
+              {scoreData.score >= 90 ? "Excellent! Your drawing is nearly perfect!" :
+               scoreData.score >= 75 ? "Great job! Your drawing is very good." :
+               scoreData.score >= 60 ? "Good work! Keep practicing to improve." :
+               scoreData.score >= 40 ? "Nice try! Practice will make it better." :
+               "Keep practicing! You'll get better with time."}
+            </p>
           </div>
           
-          <h3>Score Details</h3>
           <div className="score-details">
             <div className="score-item">
               <span>Path Overlap:</span>
@@ -544,6 +546,12 @@ const ShapesList = () => {
               {showHeatmap ? "Hide Heatmap" : "Show Heatmap"}
             </button>
             <button onClick={resetDrawing}>Try Again</button>
+            <button 
+              onClick={() => handleMoveToNext(moveToNextShape)}
+              className="next-shape-btn"
+            >
+              Move to Next
+            </button>
           </div>
         </div>
       </div>
@@ -589,45 +597,20 @@ const ShapesList = () => {
     return "default";
   };
 
-  return (
-    <div className="shapes-list">
-      <h1>Palagai Tool</h1>
-      
-      <div className="navigation">
-        <button onClick={() => navigate("/")}>Back to Tracing</button>
-      </div>
-      
-      <div className="content">
-        <div className="shapes-panel">
-          <h2>Your Shapes</h2>
-          {loading ? (
-            <p>Loading shapes...</p>
-          ) : savedShapes.length === 0 ? (
-            <p>No saved shapes found. Create some drawings first!</p>
-          ) : (
-            <ul className="shapes-menu">
-              {savedShapes.map((shape, index) => (
-                <li
-                  key={index}
-                  className={selectedShape?.id === shape.id ? "selected" : ""}
-                  onClick={() => setSelectedShape(shape)}
-                >
-                  {shape.id}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        
+  const renderPracticeArea = ({ currentShape, moveToNextShape, retryCurrentShape, isLevelComplete }) => {
+    if (currentShape !== currentShapeId) {
+      setCurrentShapeId(currentShape);
+    }
+
+    return (
         <div className="practice-area" ref={containerRef}>
           <div className="practice-controls">
-            {selectedShape && (
+          {currentShapeData && (
               <>
-                <h3>Practice: {selectedShape.id}</h3>
                 <div className="button-group">
                   <button
                     className="guide-btn"
-                    onClick={animateGuide}
+                  onClick={() => animateGuide(currentShapeData)}
                     disabled={isAnimating}
                   >
                     {isAnimating ? "Guiding..." : "Guide Me"}
@@ -641,14 +624,13 @@ const ShapesList = () => {
                   </button>
                   <button
                     className="score-btn"
-                    onClick={calculateScore}
+                  onClick={() => calculateScore(currentShapeData)}
                     disabled={userLines.length === 0 || isScored}
                   >
                     Calculate Score
                   </button>  
                 </div>
                 
-                {/* Animation Speed Control */}
                 <div className="speed-control">
                   <label htmlFor="speed-slider">Animation Speed: {getSpeedLabel()}</label>
                   <div className="speed-slider-container">
@@ -667,33 +649,29 @@ const ShapesList = () => {
                     <span className="speed-label">Fast</span>
                   </div>
                 </div> 
-                <TamilAudioPlayer selectedShapeId={selectedShape?.id} />
-              
+              <TamilAudioPlayer selectedShapeId={currentShapeData?.id} />
               </>
             )}   
-
-      
-        
           </div>
    
+        <div className="canvas-container">
           <Stage
             width={canvasDimensions.width}
             height={canvasDimensions.height}
             ref={stageRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
+            onMouseDown={(e) => handleMouseDown(e, currentShapeData)}
+            onMouseMove={(e) => handleMouseMove(e, currentShapeData)}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-            onTouchStart={handleMouseDown}
-            onTouchMove={handleMouseMove}
+            onTouchStart={(e) => handleMouseDown(e, currentShapeData)}
+            onTouchMove={(e) => handleMouseMove(e, currentShapeData)}
             onTouchEnd={handleMouseUp}
             className="practice-canvas"
             style={{ cursor: getCursorStyle() }}
           >
             <Layer>
-              {/* Template Shape (Gray) */}
-              {selectedShape &&
-                selectedShape.shapes.map((shape, i) => (
+              {currentShapeData &&
+                currentShapeData.shapes.map((shape, i) => (
                   <Line
                     key={`template-${i}`}
                     points={scalePoints(shape.points)}
@@ -706,7 +684,6 @@ const ShapesList = () => {
                   />
                 ))}
               
-              {/* User's Drawn Lines with Accuracy Colors */}
               {userLines.map((line, i) => (
                 <Line
                   key={`user-${i}`}
@@ -720,10 +697,9 @@ const ShapesList = () => {
                 />
               ))}
               
-              {/* Moving Dot (Progress Indicator) */}
-              {selectedShape && isAnimating && selectedShape.shapes[currentPathIndex] && (
+              {currentShapeData && isAnimating && currentShapeData.shapes[currentPathIndex] && (
                 (() => {
-                  const shape = selectedShape.shapes[currentPathIndex];
+                  const shape = currentShapeData.shapes[currentPathIndex];
                   const scaledPoints = scalePoints(shape.points);
                   const { x, y } = getInterpolatedPoint(scaledPoints, progress);
                   return (
@@ -731,7 +707,7 @@ const ShapesList = () => {
                       <Circle 
                         x={x} 
                         y={y} 
-                        radius={10 * Math.sqrt(scaleFactor)} // Scale radius using square root for better proportions
+                        radius={10 * Math.sqrt(scaleFactor)}
                         fill="rgba(123, 241, 59, 0.69)" 
                       />
                       <Circle 
@@ -745,240 +721,22 @@ const ShapesList = () => {
                 })()
               )} 
               
-              {/* Heatmap overlay when enabled */}
               {showHeatmap && renderHeatmap()} 
             </Layer>
           </Stage> 
-         
+          {renderScoreOverlay(moveToNextShape)}
         </div>
       </div>
+    );
+  };
+
+  return (
+    <div className="shapes-list">
+      <h1>Palagai Tool</h1>
       
-      {/* Score Overlay */}
-      {renderScoreOverlay()}
-      
-      {/* CSS for the component */}
-      <style jsx>{`
-        .shapes-list {
-          width: 100%;
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 1rem;
-        }
-        
-        .content {
-          display: flex;
-          flex-direction: column;
-        }
-        
-        @media (min-width: 768px) {
-          .content {
-            flex-direction: row;
-          }
-        }
-        
-        .shapes-panel {
-          width: 100%;
-          max-width: 100%;
-          margin-bottom: 1rem;
-        }
-        
-        @media (min-width: 768px) {
-          .shapes-panel {
-            width: 250px;
-            min-width: 250px;
-            margin-right: 1rem;
-            margin-bottom: 0;
-          }
-        }
-        
-        .practice-area {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          width: 100%;
-        }
-        
-        .practice-canvas {
-          cursor: ${getCursorStyle()};
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          margin-top: 1rem;
-          width: 100%;
-        }
-        
-        /* Score Overlay Styles */
-        .score-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: rgba(0, 0, 0, 0.7);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-        }
-        
-        .score-overlay-content {
-          background-color: #ffffff;
-          border-radius: 8px;
-          padding: 25px;
-          width: 90%;
-          max-width: 500px;
-          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-          position: relative;
-        }
-        
-        .close-button {
-          position: absolute;
-          top: 10px;
-          right: 10px;
-          background: none;
-          border: none;
-          font-size: 24px;
-          cursor: pointer;
-          color: #666;
-        }
-        
-        .score-result {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          margin: 20px 0;
-        }
-        
-        .score-circle {
-          width: 120px;
-          height: 120px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #4CAF50, #8BC34A);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          margin-bottom: 15px;
-        }
-        
-        .score-number {
-          font-size: 36px;
-          font-weight: bold;
-          color: white;
-        }
-        
-        .score-feedback {
-          font-size: 18px;
-          text-align: center;
-          color: #333;
-          margin: 0;
-        }
-        
-        .score-details {
-          background-color: #f5f5f5;
-          border-radius: 6px;
-          padding: 15px;
-          margin-top: 15px;
-        }
-        
-        .score-item {
-          display: flex;
-          align-items: center;
-          margin: 10px 0;
-        }
-        
-        .score-item span {
-          flex: 1;
-          font-size: 14px;
-        }
-        
-        .progress-bar {
-          flex: 2;
-          height: 12px;
-          background-color: #e0e0e0;
-          border-radius: 6px;
-          margin: 0 10px;
-          overflow: hidden;
-        }
-        
-        .progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #4CAF50, #8BC34A);
-          border-radius: 6px;
-        }
-        
-        .score-actions {
-          display: flex;
-          justify-content: space-around;
-          margin-top: 20px;
-        }
-        
-        .score-actions button {
-          padding: 10px 20px;
-          border: none;
-          border-radius: 4px;
-          background-color: #4CAF50;
-          color: white;
-          font-weight: bold;
-          cursor: pointer;
-          transition: background-color 0.3s;
-        }
-        
-        .score-actions button:hover {
-          background-color: #3e8e41;
-        }
-        
-        /* Feedback legend styles */
-        .feedback-legend {
-          margin-top: 15px;
-          padding: 10px;
-          background-color: rgba(255, 255, 255, 0.1);
-          border-radius: 6px;
-        }
-        
-        .feedback-legend h4 {
-          margin-top: 0;
-          margin-bottom: 8px;
-        }
-        
-        .legend-item {
-          display: flex;
-          align-items: center;
-          margin: 5px 0;
-        }
-        
-        .color-sample {
-          width: 20px;
-          height: 10px;
-          border-radius: 3px;
-          margin-right: 8px;
-        }  
-
-
-
-
-
-
-
-  .data-converter-container {
-  margin-top: 20px;
-  border-top: 1px solid #ddd;
-  padding-top: 20px;
-  }
-
-  .analyze-btn {
-  padding: 8px 16px;
-  background-color: #9C27B0;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-left: 10px;
-  }
-
-  .analyze-btn:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-  }
-      `}</style>
+      <LevelManager>
+        {renderPracticeArea}
+      </LevelManager>
     </div>
   );
 };

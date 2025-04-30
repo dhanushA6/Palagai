@@ -156,12 +156,6 @@ const ShapeDrawingApp = () => {
           >
             Pen
           </button>
-          {/* <button 
-            className={`tool-btn ${tool === 'eraser' ? 'active' : ''}`}
-            onClick={() => setTool('eraser')}
-          >
-            Eraser
-          </button> */}
         </div>
         
         <div className="stroke-width">
@@ -222,10 +216,7 @@ const ShapeDrawingApp = () => {
         <button onClick={handleSave} disabled={lines.length === 0}>
           Save
         </button>
-        <button onClick={() => navigate("/shapes")}>
-          go to Practice 
-        </button> 
-        <button onClick={handleDownload} disabled={lines.length === 0} >Download Shapes JSON</button>
+        <button onClick={handleDownload} disabled={lines.length === 0}>Download Shapes JSON</button>
       </div>
     </div>
   );
