@@ -104,7 +104,7 @@ const TamilAudioPlayer = ({ selectedShapeId }) => {
         <>
           <audio
             ref={audioRef}
-            src={`src/assets/audio/Ezhutholi_MP3/${selectedShapeId}.mp3`}
+            src={`/audio/Ezhutholi_MP3/${selectedShapeId}.mp3`}
             onLoadedData={handleAudioLoaded}
             onError={handleAudioError}
             onEnded={handleAudioEnded}
