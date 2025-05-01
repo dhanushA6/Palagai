@@ -6,13 +6,13 @@ const LEVELS = [
   {
     id: 1,
     name: "Level 1 - Basic Shapes",
-    shapes: ['a', 'aa', 'e', 'ee'],
+    shapes: ['a', 'aa', 'e', 'ee', 'k', 'ka', 'ra', 'pa', 'ma'],
     description: "Learn the basic Tamil vowels"
   },
   {
     id: 2,
     name: "Level 2 - Intermediate Shapes",
-    shapes: ['k', 'ka', 'ra'],
+    shapes: ['pa', 'ma', 'k', 'ka', 'ra', 'a', 'aa', 'e', 'ee', ],
     description: "Practice with consonant-vowel combinations"
   },
   {

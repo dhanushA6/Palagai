@@ -11,8 +11,8 @@ const App = () => {
       <ShapesProvider>
         <div className="app-container">
           <Routes>
-            <Route path="/" element={<ShapeDrawingApp />} />
-            <Route path="/shapes" element={<ShapesList />} />
+            {/* <Route path="/" element={<ShapeDrawingApp />} /> */}
+            <Route path="/" element={<ShapesList />} />
           </Routes>
         </div>
       </ShapesProvider>

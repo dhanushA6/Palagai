@@ -3,8 +3,6 @@ import { Stage, Layer, Line } from "react-konva";
 import { useNavigate } from "react-router-dom";
 import { saveShapes, downloadShapesAsJSON  } from "../utils/database";
 
-import { ShapesProvider, useShapes } from '../contexts/ShapesContext';
-
 
 const ShapeDrawingApp = () => {
   const [lines, setLines] = useState([]);
@@ -21,7 +19,6 @@ const ShapeDrawingApp = () => {
     downloadShapesAsJSON();
   }; 
 
-  // Start drawing a new line
   const startDrawing = useCallback((pos) => {
     if (!pos) return;
     setDrawing(true);
