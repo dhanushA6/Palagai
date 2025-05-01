@@ -49,7 +49,7 @@ const TamilAudioPlayer = ({ selectedShapeId }) => {
       if (selectedShapeId.length === 1) {
         audioRef.current.playbackRate = 0.5;
       } else {
-        audioRef.current.playbackRate = 0.4;
+        audioRef.current.playbackRate = 0.3;
       }
       
       // Increase the volume (0 = silent, 1 = normal, 2 = double volume)

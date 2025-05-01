@@ -39,7 +39,7 @@ const ShapesList = () => {
       setLoading(true);
       try {
         const loadedShapes = await Promise.all(
-          ['a', 'aa', 'e', 'ee', 'k', 'ka', 'ra', 'pa', 'ma'].map(async (shapeId) => {
+          ['a', 'aa', 'e', 'ee', 'k', 'ka', 'ra', 'pa', 'ma', 'ow', 'oa', 'ba', 'da', 'la', 'kaa', 'may', 'ke', 'so'].map(async (shapeId) => {
             const data = await loadShapeData(shapeId);
             return data;
           })
