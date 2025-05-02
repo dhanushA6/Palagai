@@ -3,8 +3,8 @@ import { Stage, Layer, Line, Circle, Rect } from "react-konva";
 import { useNavigate } from "react-router-dom";
 import { getInterpolatedPoint, pointToLineDistance } from "../utils/drawingUtils";
 import { calculateAccuracy, generateHeatmapData } from "../utils/evaluationUtils"; 
-import TamilAudioPlayer from "./TamilAudioPlayer";
-import '../styles/ShapeList.css';
+import TamilAudioPlayer from "./TamilAudioPlayer"; 
+import "../styles/ShapesList.css";
 // Define the shapes list
 // const SHAPES = ['a', 'aa', 'e', 'ee',  'ka', 'ra', 'pa', 'maa', 'ow', 'oa', 'ba', 'da', 'la', 'kaa', 'may', 'ke', 'so'];
 const SHAPES = ['aa', 'a', 'e', 'ee',  'ka', 'ra', 'pa', 'maa', 'ow', 'oa'];
