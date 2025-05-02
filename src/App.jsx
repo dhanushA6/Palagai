@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import ShapeDrawingApp from "./components/ShapeDrawingApp";
 import ShapesList from "./components/ShapesList";
 import { ShapesProvider } from "./contexts/ShapesContext";
-import "./styles/index.css";
+
 
 const App = () => {
   return (

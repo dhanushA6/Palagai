@@ -4,10 +4,18 @@ import { useNavigate } from "react-router-dom";
 import { getInterpolatedPoint, pointToLineDistance } from "../utils/drawingUtils";
 import { calculateAccuracy, generateHeatmapData } from "../utils/evaluationUtils"; 
 import TamilAudioPlayer from "./TamilAudioPlayer";
-import LevelManager from "./LevelManager";
+import '../styles/ShapeList.css';
+// Define the shapes list
+// const SHAPES = ['a', 'aa', 'e', 'ee',  'ka', 'ra', 'pa', 'maa', 'ow', 'oa', 'ba', 'da', 'la', 'kaa', 'may', 'ke', 'so'];
+const SHAPES = ['aa', 'a', 'e', 'ee',  'ka', 'ra', 'pa', 'maa', 'ow', 'oa'];
+const BOX_TYPES = {
+  CARBON: 'carbon',
+  CRYSTAL: 'crystal',
+  DIAMOND: 'diamond'
+};
 
 const ShapesList = () => {
-  const [savedShapes, setSavedShapes] = useState([]);
+  const [savedShapes, setSavedShapes] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [userLines, setUserLines] = useState([]);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -26,12 +34,23 @@ const ShapesList = () => {
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 1000, height: 500 });
   const [scaleFactor, setScaleFactor] = useState(1);
   const [templateBounds, setTemplateBounds] = useState({ minX: 0, minY: 0, maxX: 1000, maxY: 500 });
-  const [currentShapeId, setCurrentShapeId] = useState(null);
-  const [currentShapeData, setCurrentShapeData] = useState(null);
+  const [currentShapeIndex, setCurrentShapeIndex] = useState(0);
+  const [isGameComplete, setIsGameComplete] = useState(false);
+  const [showGameComplete, setShowGameComplete] = useState(false);
+  const [isGameStarted, setIsGameStarted] = useState(false);
+  const audioPlayerRef = useRef(null);
   
   const stageRef = useRef(null);
   const containerRef = useRef(null);
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
+
+  const [boxes, setBoxes] = useState({
+    [BOX_TYPES.CARBON]: [],
+    [BOX_TYPES.CRYSTAL]: [],
+    [BOX_TYPES.DIAMOND]: []
+  });
+  const [movingShape, setMovingShape] = useState(null);
+  const [levelProgress, setLevelProgress] = useState({});
 
   // Load all shapes on component mount
   useEffect(() => {
@@ -39,7 +58,7 @@ const ShapesList = () => {
       setLoading(true);
       try {
         const loadedShapes = await Promise.all(
-          ['a', 'aa', 'e', 'ee', 'k', 'ka', 'ra', 'pa', 'ma', 'ow', 'oa', 'ba', 'da', 'la', 'kaa', 'may', 'ke', 'so'].map(async (shapeId) => {
+          SHAPES.map(async (shapeId) => {
             const data = await loadShapeData(shapeId);
             return data;
           })
@@ -61,23 +80,22 @@ const ShapesList = () => {
     loadAllShapes();
   }, []);
 
-  // Update current shape data when shape ID changes
+  // Update current shape data when shape index changes
   useEffect(() => {
-    if (currentShapeId) {
-      const shapeData = savedShapes.find(shape => shape.id === currentShapeId);
-      setCurrentShapeData(shapeData);
+    if (currentShapeIndex < SHAPES.length) { 
+      const current_shape = getCurrentShape(currentShapeIndex); 
+      console.log(current_shape);
+      const shapeData = savedShapes.find(shape => shape.id === current_shape.id);
       if (shapeData) {
         updateTemplateBounds(shapeData);
       }
-    } else {
-      setCurrentShapeData(null);
     }
-  }, [currentShapeId, savedShapes]);
+  }, [currentShapeIndex, savedShapes, isGameStarted]);
 
   // Reset states when shape changes
   useEffect(() => {
     resetStates();
-  }, [currentShapeId]);
+  }, [currentShapeIndex]);
 
   // Update canvas dimensions on window resize
   useEffect(() => {
@@ -102,7 +120,44 @@ const ShapesList = () => {
     };
   }, [templateBounds]);
 
+  // Play audio when shape changes
+  useEffect(() => {
+    if (audioPlayerRef.current && getCurrentShape()) {
+      audioPlayerRef.current.playAudio();
+    }
+  }, [currentShapeIndex, isGameStarted]);
+
+  // Load level progress from localStorage on mount
+  useEffect(() => {
+    const savedProgress = localStorage.getItem('levelProgress');
+    if (savedProgress) {
+      setLevelProgress(JSON.parse(savedProgress));
+    }
+  }, []);
+
+  // Save level progress to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('levelProgress', JSON.stringify(levelProgress));
+  }, [levelProgress]);
+
+  // Initialize boxes when shapes are loaded
+  useEffect(() => {
+    if (savedShapes.length > 0) {
+      const initialBoxes = {
+        [BOX_TYPES.CARBON]: SHAPES.map(shapeId => ({
+          id: shapeId,
+          box: BOX_TYPES.CARBON
+        })),
+        [BOX_TYPES.CRYSTAL]: [],
+        [BOX_TYPES.DIAMOND]: []
+      };
+      setBoxes(initialBoxes);
+    }
+  }, [savedShapes]);
+
   const loadShapeData = async (shapeId) => {
+
+
     try {
       const shapeData = await import(`../assets/data/${shapeId}.json`);
       return shapeData.default || shapeData;
@@ -374,39 +429,99 @@ const ShapesList = () => {
     setCursorMode(isAnimating ? "guiding" : "default");
   };
 
-  // Function to get line color based on accuracy
-  const getLineColorByAccuracy = (lineId) => {
-    if (!realtimeFeedback) return "rgba(217, 239, 48, 0.7)";
-    
-    const accuracy = lineAccuracy[lineId];
-    
-    switch (accuracy) {
-      case "excellent":
-        return "rgba(46, 204, 113, 0.8)";
-      case "good":
-        return "rgba(46, 204, 113, 0.8)";
-      default:
-        return "rgba(231, 76, 60, 0.8)";
+  // Get the next box for a shape based on its position in the sequence
+  const getNextBox = (shapeIndex) => {
+    if ((shapeIndex%SHAPES.length === 4 || shapeIndex%SHAPES.length == 5 ) && boxes[BOX_TYPES.CRYSTAL].length > 0) {
+      return BOX_TYPES.CRYSTAL;
+    } else if ((shapeIndex %SHAPES.length === 8|| shapeIndex %SHAPES.length == 9 ) && boxes[BOX_TYPES.DIAMOND].length > 0) {
+      return BOX_TYPES.DIAMOND;
     }
+    else if (boxes[BOX_TYPES.CARBON].length > 0) {
+      return BOX_TYPES.CARBON;
+    } 
+    else if (boxes[BOX_TYPES.CRYSTAL].length > 0) {
+      return BOX_TYPES.CRYSTAL;
+    }
+    else if (boxes[BOX_TYPES.DIAMOND].length > 0) {
+      return BOX_TYPES.DIAMOND;
+    }
+    return BOX_TYPES.CARBON;
   };
 
-  // Function to get line width based on accuracy
-  const getLineWidthByAccuracy = (lineId) => {
-    if (!realtimeFeedback) return 4 * scaleFactor;
+  // Move a shape to a new box
+  const moveShapeToBox = (shapeId, targetBox) => {
+    const currentBox = Object.entries(boxes).find(([_, shapes]) => 
+      shapes.some(shape => shape.id === shapeId)
+    )?.[0];
+
+    let animationClass = '';
     
-    const accuracy = lineAccuracy[lineId];
-    const baseWidth = 4 * scaleFactor;
-    
-    switch (accuracy) {
-      case "excellent":
-        return baseWidth * 1.25;
-      case "good":
-        return baseWidth;
-      default:
-        return baseWidth * 0.75;
+    if (currentBox === targetBox) {
+      animationClass = 'moving-top-to-bottom';
+    } else if (
+      (currentBox === BOX_TYPES.CARBON && targetBox === BOX_TYPES.CRYSTAL) ||
+      (currentBox === BOX_TYPES.CRYSTAL && targetBox === BOX_TYPES.DIAMOND)
+    ) {
+      animationClass = 'moving-left-to-right';
+    } else if (
+      (currentBox === BOX_TYPES.DIAMOND && targetBox === BOX_TYPES.CRYSTAL) ||
+      (currentBox === BOX_TYPES.CRYSTAL && targetBox === BOX_TYPES.CARBON)
+    ) {
+      animationClass = 'moving-right-to-left';
     }
+
+    setMovingShape({ id: shapeId, targetBox, animationClass });
+    
+    setTimeout(() => {
+      setBoxes(prevBoxes => {
+        const newBoxes = { ...prevBoxes };
+        
+        // Remove from current box
+        Object.keys(newBoxes).forEach(box => {
+          newBoxes[box] = newBoxes[box].filter(shape => shape.id !== shapeId);
+        });
+        
+        // Add to target box
+        newBoxes[targetBox] = [...newBoxes[targetBox], { id: shapeId, box: targetBox }];
+        
+        return newBoxes;
+      });
+      
+      setMovingShape(null);
+    }, 500); // Match animation duration
   };
 
+  // Update shape position based on score
+  const updateShapePosition = (shapeId, score) => {
+    const currentBox = Object.entries(boxes).find(([_, shapes]) => 
+      shapes.some(shape => shape.id === shapeId)
+    )?.[0];
+
+    if (!currentBox) return;
+
+    let targetBox;
+    if (score >= 60) {
+      if (currentBox === BOX_TYPES.CARBON) {
+        targetBox = BOX_TYPES.CRYSTAL;
+      } else if (currentBox === BOX_TYPES.CRYSTAL) {
+        targetBox = BOX_TYPES.DIAMOND;
+      } else {
+        targetBox = BOX_TYPES.DIAMOND;
+      }
+    } else {
+      if (currentBox === BOX_TYPES.CARBON) {
+        targetBox = BOX_TYPES.CARBON;
+      } else if (currentBox === BOX_TYPES.CRYSTAL) {
+        targetBox = BOX_TYPES.CARBON;
+      } else {
+        targetBox = BOX_TYPES.CRYSTAL;
+      }
+    }
+
+    moveShapeToBox(shapeId, targetBox);
+  };
+
+  // Modified calculateScore function to update shape position
   const calculateScore = (currentShape) => {
     if (!currentShape || userLines.length === 0) {
       alert("Please draw your shape first!");
@@ -422,6 +537,9 @@ const ShapesList = () => {
     setScoreData(result);
     setIsScored(true);
     setShowScoreOverlay(true);
+    
+    // Update shape position based on score
+    updateShapePosition(currentShape.id, result.score);
     
     if (stageRef.current) {
       const { width, height } = stageRef.current.getSize();
@@ -458,10 +576,6 @@ const ShapesList = () => {
     return `${animationSpeed}x`;
   };
 
-  const toggleRealtimeFeedback = () => {
-    setRealtimeFeedback(!realtimeFeedback);
-  };
-
   // Render functions for UI elements
   const renderPenCursor = (type) => {
     const drawingPen = (
@@ -483,10 +597,52 @@ const ShapesList = () => {
     return type === "drawing" ? drawingPen : guidingPen;
   };
 
-  const handleMoveToNext = (moveToNextShape) => {
-    resetDrawing();
-    moveToNextShape();
+  const moveToNextShape = () => {
+    if (currentShapeIndex < SHAPES.length - 1) {
+      setCurrentShapeIndex(prev => prev + 1);
+      setShowScoreOverlay(false);
+    } else {
+      setIsGameComplete(true);
+      setShowGameComplete(true);
+    }
   };
+
+  const retryCurrentShape = () => {
+    resetStates();
+  };
+
+  const getCurrentShape = () => { 
+    let boxname = getNextBox(currentShapeIndex);   
+   
+    let current_shape = null;
+    if (boxname === "diamond") {
+      current_shape =  boxes[BOX_TYPES.DIAMOND][0];
+    } else if (boxname === "crystal") {
+      current_shape= boxes[BOX_TYPES.CRYSTAL][0];
+    } else {
+      current_shape = boxes[BOX_TYPES.CARBON][0];
+    }  
+
+    if (current_shape == null){
+      return [];
+    }
+    return savedShapes.find(shape => shape.id === current_shape.id);
+   
+  }; 
+
+  const getCurrentId = () => {
+    let boxname = getNextBox(currentShapeIndex);   
+   
+    let current_shape = null;
+    if (boxname === "diamond") {
+      current_shape =  boxes[BOX_TYPES.DIAMOND][0];
+    } else if (boxname === "crystal") {
+      current_shape= boxes[BOX_TYPES.CRYSTAL][0];
+    } else {
+      current_shape = boxes[BOX_TYPES.CARBON][0];
+    }  
+    return current_shape&&current_shape.id;
+  }
 
   const renderScoreOverlay = (moveToNextShape) => {
     if (!showScoreOverlay || !scoreData) return null;
@@ -547,7 +703,7 @@ const ShapesList = () => {
             </button>
             <button onClick={resetDrawing}>Try Again</button>
             <button 
-              onClick={() => handleMoveToNext(moveToNextShape)}
+              onClick={() => moveToNextShape()}
               className="next-shape-btn"
             >
               Move to Next
@@ -597,98 +753,104 @@ const ShapesList = () => {
     return "default";
   };
 
-  const renderPracticeArea = ({ currentShape, moveToNextShape, retryCurrentShape, isLevelComplete }) => {
-    if (currentShape !== currentShapeId) {
-      setCurrentShapeId(currentShape);
+  const renderPracticeArea = ({ currentShape, moveToNextShape, retryCurrentShape, isGameComplete }) => {
+    if (!currentShape) {
+      return (
+        <div className="practice-area">
+          <div className="loading-message">Loading shape data...</div>
+        </div>
+      );
     }
 
     return (
-        <div className="practice-area" ref={containerRef}>
-          <div className="practice-controls">
-          {currentShapeData && (
-              <>
-                <div className="button-group">
-                  <button
-                    className="guide-btn"
-                  onClick={() => animateGuide(currentShapeData)}
+      <div className="practice-area" ref={containerRef}>
+        <div className="practice-controls">
+          {currentShape && (
+            <>
+              <div className="button-group">
+                <button
+                  className="guide-btn"
+                  onClick={() => animateGuide(currentShape)}
+                  disabled={isAnimating}
+                >
+                  {isAnimating ? "Guiding..." : "Guide Me"}
+                </button>
+                <button 
+                  className="reset-btn"
+                  onClick={resetDrawing}
+                  disabled={userLines.length === 0}
+                >
+                  Reset
+                </button>
+                <button
+                  className="score-btn"
+                  onClick={() => calculateScore(currentShape)}
+                  disabled={userLines.length === 0 || isScored}
+                >
+                  Calculate Score
+                </button>  
+              </div>
+              
+              <div className="speed-control">
+                <label htmlFor="speed-slider">Animation Speed: {getSpeedLabel()}</label>
+                <div className="speed-slider-container">
+                  <span className="speed-label">Slow</span>
+                  <input
+                    id="speed-slider"
+                    type="range"
+                    min="0.5"
+                    max="3"
+                    step="0.5"
+                    value={animationSpeed}
+                    onChange={handleSpeedChange}
+                    className="speed-slider"
                     disabled={isAnimating}
-                  >
-                    {isAnimating ? "Guiding..." : "Guide Me"}
-                  </button>
-                  <button 
-                    className="reset-btn"
-                    onClick={resetDrawing}
-                    disabled={userLines.length === 0}
-                  >
-                    Reset
-                  </button>
-                  <button
-                    className="score-btn"
-                  onClick={() => calculateScore(currentShapeData)}
-                    disabled={userLines.length === 0 || isScored}
-                  >
-                    Calculate Score
-                  </button>  
+                  />
+                  <span className="speed-label">Fast</span>
                 </div>
-                
-                <div className="speed-control">
-                  <label htmlFor="speed-slider">Animation Speed: {getSpeedLabel()}</label>
-                  <div className="speed-slider-container">
-                    <span className="speed-label">Slow</span>
-                    <input
-                      id="speed-slider"
-                      type="range"
-                      min="0.5"
-                      max="3"
-                      step="0.5"
-                      value={animationSpeed}
-                      onChange={handleSpeedChange}
-                      className="speed-slider"
-                      disabled={isAnimating}
-                    />
-                    <span className="speed-label">Fast</span>
-                  </div>
-                </div> 
-              <TamilAudioPlayer selectedShapeId={currentShapeData?.id} />
-              </>
-            )}   
-          </div>
+              </div> 
+              <TamilAudioPlayer 
+                ref={audioPlayerRef}
+                selectedShapeId={currentShape?.id} 
+              />
+            </>
+          )}   
+        </div>
    
         <div className="canvas-container">
           <Stage
             width={canvasDimensions.width}
             height={canvasDimensions.height}
             ref={stageRef}
-            onMouseDown={(e) => handleMouseDown(e, currentShapeData)}
-            onMouseMove={(e) => handleMouseMove(e, currentShapeData)}
+            onMouseDown={(e) => handleMouseDown(e, currentShape)}
+            onMouseMove={(e) => handleMouseMove(e, currentShape)}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-            onTouchStart={(e) => handleMouseDown(e, currentShapeData)}
-            onTouchMove={(e) => handleMouseMove(e, currentShapeData)}
+            onTouchStart={(e) => handleMouseDown(e, currentShape)}
+            onTouchMove={(e) => handleMouseMove(e, currentShape)}
             onTouchEnd={handleMouseUp}
             className="practice-canvas"
             style={{ cursor: getCursorStyle() }}
           >
             <Layer>
-              {currentShapeData &&
-                currentShapeData.shapes.map((shape, i) => (
-                  <Line
-                    key={`template-${i}`}
-                    points={scalePoints(shape.points)}
-                    stroke="rgba(250, 250, 250, 0.5)"
-                    strokeWidth={(shape.strokeWidth || 4) * scaleFactor}
-                    lineJoin="round"
-                    dash={[10 * scaleFactor, 10 * scaleFactor]}
-                    tension={0.5}
-                    bezier={true}
-                  />
-                ))}
+              {currentShape?.shapes?.map((shape, i) => (
+                <Line
+                  key={`template-${i}`}
+                  points={scalePoints(shape.points)}
+                  stroke="rgba(250, 250, 250, 0.5)"
+                  strokeWidth={(shape.strokeWidth || 4) * scaleFactor}
+                  lineJoin="round"
+                  dash={[10 * scaleFactor, 10 * scaleFactor]}
+                  tension={0.5}
+                  bezier={true}
+                />
+              ))}
               
               {userLines.map((line, i) => (
                 <Line
                   key={`user-${i}`}
                   points={line.points}
-                  stroke={getLineColorByAccuracy(line.id)}
+                  stroke="rgba(217, 239, 48, 0.7)"
                   strokeWidth={line.strokeWidth || (4 * scaleFactor)}
                   lineCap="round"
                   lineJoin="round"
@@ -697,9 +859,9 @@ const ShapesList = () => {
                 />
               ))}
               
-              {currentShapeData && isAnimating && currentShapeData.shapes[currentPathIndex] && (
+              {currentShape && isAnimating && currentShape.shapes?.[currentPathIndex] && (
                 (() => {
-                  const shape = currentShapeData.shapes[currentPathIndex];
+                  const shape = currentShape.shapes[currentPathIndex];
                   const scaledPoints = scalePoints(shape.points);
                   const { x, y } = getInterpolatedPoint(scaledPoints, progress);
                   return (
@@ -730,13 +892,92 @@ const ShapesList = () => {
     );
   };
 
+  const renderGameComplete = () => {
+    if (!showGameComplete) return null;
+
+    return (
+      <div className="game-complete-overlay">
+        <div className="game-complete-content">
+          <h2>Game Complete!</h2>
+          <p>Congratulations! You've completed all the shapes!</p>
+          <button onClick={() => {
+            setCurrentShapeIndex(0);
+            setIsGameComplete(false);
+            setShowGameComplete(false);
+            resetStates();
+          }}>Play Again</button>
+        </div>
+      </div>
+    );
+  };
+  console.log(getCurrentId());
+  // Render the boxes
+  const renderBoxes = () => {
+    return (
+      <div className="boxes-container">
+        {Object.entries(boxes).map(([boxType, shapes]) => (
+          <div key={boxType} className={`shape-box ${boxType}-box`}>
+            <h3>{boxType.charAt(0).toUpperCase() + boxType.slice(1)}</h3>
+            <div className="shape-list">
+              {shapes.map(shape => (
+                <div
+                  key={shape.id}
+                  className={`shape-item ${shape.id === getCurrentId() ? 'active' : ''} ${
+                    movingShape?.id === shape.id ? movingShape.animationClass : ''
+                  }`}
+                >
+                  {shape.id}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+  
+  useEffect(() => {
+    renderBoxes();
+  }, [getCurrentId]);
+  const renderStartOverlay = () => {
+    if (isGameStarted) return null;
+    return (
+      <div className="start-overlay">
+        <div className="start-overlay-content">
+          <h2>Welcome to Tamil Letter Tracing!</h2>
+          <p>Practice writing Tamil letters by following the guide.</p>
+          <button 
+            onClick={() => setIsGameStarted(true)}
+            className="start-game-btn"
+          >
+            Start Game
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="shapes-list">
-      <h1>Palagai Tool</h1>
-      
-      <LevelManager>
-        {renderPracticeArea}
-      </LevelManager>
+      {!isGameComplete && (
+        <>
+          {!isGameStarted && renderStartOverlay()}
+          <div className="shape-info">
+            <h2>Shape {currentShapeIndex + 1} of {SHAPES.length}</h2>
+          </div>
+    
+      <div className="game-area"> 
+      {renderPracticeArea({
+            currentShape: getCurrentShape(),
+            moveToNextShape,
+            retryCurrentShape,
+            isGameComplete
+          })}
+          {renderBoxes()}
+      </div>
+        </>
+      )}
+      {renderGameComplete()}
     </div>
   );
 };
