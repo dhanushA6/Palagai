@@ -6,8 +6,8 @@ import { calculateAccuracy, generateHeatmapData } from "../utils/evaluationUtils
 import TamilAudioPlayer from "./TamilAudioPlayer"; 
 import "../styles/ShapesList.css";
 // Define the shapes list
-// const SHAPES = ['a', 'aa', 'e', 'ee',  'ka', 'ra', 'pa', 'maa', 'ow', 'oa', 'ba', 'da', 'la', 'kaa', 'may', 'ke', 'so'];
-const SHAPES = ['aa', 'a', 'e', 'ee',  'ka', 'ra', 'pa', 'maa', 'ow', 'oa'];
+const SHAPES = ['a', 'aa', 'e', 'ee',  'ka', 'ra', 'pa', 'maa', 'ow', 'oa', 'ba', 'da', 'la', 'kaa', 'may', 'ke', 'so'];
+// const SHAPES = ['aa', 'a', 'e', 'ee',  'ka', 'ra', 'pa', 'maa', 'ow', 'oa'];
 const BOX_TYPES = {
   CARBON: 'carbon',
   CRYSTAL: 'crystal',
@@ -434,10 +434,11 @@ const ShapesList = () => {
   };
 
   // Get the next box for a shape based on its position in the sequence
-  const getNextBox = (shapeIndex) => {
-    if ((shapeIndex%SHAPES.length === 4 || shapeIndex%SHAPES.length == 5 ) && boxes[BOX_TYPES.CRYSTAL].length > 0) {
+  const getNextBox = (shapeIndex) => { 
+    
+    if (((shapeIndex+1)%4 === 0 && (shapeIndex+1)%9 != 0 ) && boxes[BOX_TYPES.CRYSTAL].length > 0) {
       return BOX_TYPES.CRYSTAL;
-    } else if ((shapeIndex %SHAPES.length === 8|| shapeIndex %SHAPES.length == 9 ) && boxes[BOX_TYPES.DIAMOND].length > 0) {
+    } else if (((shapeIndex+1) %9 == 0) && boxes[BOX_TYPES.DIAMOND].length > 0) {
       return BOX_TYPES.DIAMOND;
     }
     else if (boxes[BOX_TYPES.CARBON].length > 0) {

@@ -1,4 +1,4 @@
-// Utility to get interpolated point along a path
+
 export const getInterpolatedPoint = (points, t) => {
     if (points.length < 4) return { x: points[0], y: points[1] };
   
@@ -19,7 +19,7 @@ export const getInterpolatedPoint = (points, t) => {
     };
   };
   
-  // Convert line points to path for comparison
+
   export const pointsToPath = (points) => {
     if (points.length < 2) return "";
     
@@ -30,7 +30,7 @@ export const getInterpolatedPoint = (points, t) => {
     return path;
   };
   
-  // Get bounding box of a shape
+
   export const getBoundingBox = (points) => {
     let minX = Infinity, minY = Infinity;
     let maxX = -Infinity, maxY = -Infinity;
