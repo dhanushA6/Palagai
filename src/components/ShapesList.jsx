@@ -82,15 +82,18 @@ const ShapesList = () => {
 
   // Update current shape data when shape index changes
   useEffect(() => {
-    if (currentShapeIndex < SHAPES.length) { 
-      const current_shape = getCurrentShape(currentShapeIndex); 
-      console.log(current_shape);
-      const shapeData = savedShapes.find(shape => shape.id === current_shape.id);
-      if (shapeData) {
-        updateTemplateBounds(shapeData);
+    const updateBounds = async () => {
+      if (currentShapeIndex < SHAPES.length) { 
+        const currentShape = getCurrentShape();
+        if (currentShape && currentShape.shapes) {
+          console.log("Updating bounds for shape:", currentShape.id);
+          updateTemplateBounds(currentShape);
+        }
       }
-    }
-  }, [currentShapeIndex, savedShapes, isGameStarted]);
+    };
+    
+    updateBounds();
+  }, [currentShapeIndex, savedShapes, boxes]);
 
   // Reset states when shape changes
   useEffect(() => {
@@ -168,7 +171,8 @@ const ShapesList = () => {
   };
 
   // Calculate template bounds when a shape is selected
-  const updateTemplateBounds = (shape) => {
+  const updateTemplateBounds = (shape) => { 
+    console.log("E", shape.id);
     if (shape && shape.shapes && shape.shapes.length > 0) {
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       
@@ -538,9 +542,6 @@ const ShapesList = () => {
     setIsScored(true);
     setShowScoreOverlay(true);
     
-    // Update shape position based on score
-    updateShapePosition(currentShape.id, result.score);
-    
     if (stageRef.current) {
       const { width, height } = stageRef.current.getSize();
       const heatmap = generateHeatmapData(
@@ -599,6 +600,15 @@ const ShapesList = () => {
 
   const moveToNextShape = () => {
     if (currentShapeIndex < SHAPES.length - 1) {
+      // Update shape position based on score before moving to next shape
+      if (scoreData) {
+        updateShapePosition(getCurrentShape().id, scoreData.score);
+      }
+      
+      // Reset states before moving to next shape
+      resetStates();
+      
+      // Move to next shape
       setCurrentShapeIndex(prev => prev + 1);
       setShowScoreOverlay(false);
     } else {
@@ -612,7 +622,9 @@ const ShapesList = () => {
   };
 
   const getCurrentShape = () => { 
-    let boxname = getNextBox(currentShapeIndex);   
+  
+    let boxname = getNextBox(currentShapeIndex);  
+
    
     let current_shape = null;
     if (boxname === "diamond") {
@@ -622,7 +634,7 @@ const ShapesList = () => {
     } else {
       current_shape = boxes[BOX_TYPES.CARBON][0];
     }  
-
+    console.log("C", current_shape) 
     if (current_shape == null){
       return [];
     }
