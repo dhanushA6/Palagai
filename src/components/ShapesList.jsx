@@ -6,8 +6,8 @@ import { calculateAccuracy, generateHeatmapData } from "../utils/evaluationUtils
 import TamilAudioPlayer from "./TamilAudioPlayer"; 
 import "../styles/ShapesList.css";
 // Define the shapes list
-const SHAPES = ['a', 'aa', 'e', 'ee',  'ka', 'ra', 'pa', 'maa', 'ow', 'oa', 'ba', 'da', 'la', 'kaa', 'may', 'ke', 'so'];
-// const SHAPES = ['aa', 'a', 'e', 'ee',  'ka', 'ra', 'pa', 'maa', 'ow', 'oa'];
+// const SHAPES = ['a', 'aa', 'e', 'ee',  'ka', 'ra', 'pa', 'maa', 'ow', 'oa', 'ba', 'da', 'la', 'kaa', 'may', 'ke', 'so'];
+const SHAPES = ['aa', 'a', 'e', 'ee',  'ka', 'ra', 'pa', 'maa', 'ow', 'oa'];
 const BOX_TYPES = {
   CARBON: 'carbon',
   CRYSTAL: 'crystal',
